@@ -70,3 +70,11 @@ debate_config.json
 transcripts/
 *.db
 *.sqlite
+
+# Temporary folders
+tmp/
+temp/
+
+# Python
+pip-log.txt
+pip-delete-this-directory.txt

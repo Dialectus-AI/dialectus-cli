@@ -1,1 +1,1 @@
-"""Configuration management for the AI debate system."""
+"""Configuration management for the Dialectus AI Debate System."""

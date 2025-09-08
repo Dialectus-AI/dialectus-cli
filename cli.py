@@ -1,4 +1,4 @@
-"""Command-line interface for the AI debate system."""
+"""Command-line interface for the Dialectus Dialectus."""
 
 import asyncio
 import json
@@ -49,7 +49,7 @@ def setup_logging(level: str = "INFO") -> None:
 )
 @click.pass_context
 def cli(ctx: click.Context, config: Optional[str], log_level: str) -> None:
-    """AI Debate System - Local-first debate orchestration."""
+    """Dialectus - Local-first debate orchestration."""
     setup_logging(log_level)
 
     # Load configuration

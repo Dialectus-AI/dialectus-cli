@@ -71,11 +71,6 @@ python cli.py --configure
 
 This repository was extracted from the original AI-Debate monolith to create a focused, installable CLI tool.
 
-For multi-repository development workflow, use:
-```bash
-claude-code --add-dir ../dialectus-engine --add-dir ../dialectus-web dialectus-cli
-```
-
 ## Dependencies
 
 - `rich` - Beautiful terminal output and interactive prompts

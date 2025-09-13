@@ -1,1 +1,0 @@
-"""Configuration management for the Dialectus AI Debate System."""

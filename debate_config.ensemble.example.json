@@ -22,7 +22,7 @@
     }
   },
   "judging": {
-    "judge_models": ["openthinker:7b"],
+    "judge_models": ["openthinker:7b", "llama3.2:3b", "qwen2.5:3b"],
     "judge_provider": "ollama",
     "criteria": [
       "logic",

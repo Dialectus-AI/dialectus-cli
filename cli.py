@@ -103,8 +103,12 @@ def debate(
         console.print("[yellow]Debate cancelled[/yellow]")
         return
 
-    # Run the debate
-    asyncio.run(_run_debate_async(config, interactive))
+    # Run the debate with top-level exception handling
+    try:
+        asyncio.run(_run_debate_async(config, interactive))
+    except Exception as e:
+        _display_error(e)
+        raise SystemExit(1)
 
 
 @cli.command()
@@ -143,7 +147,11 @@ def list_models(ctx: click.Context) -> None:
         finally:
             await client.close()
 
-    asyncio.run(_list_models())
+    try:
+        asyncio.run(_list_models())
+    except Exception as e:
+        _display_error(e)
+        raise SystemExit(1)
 
 
 @cli.command()
@@ -605,6 +613,26 @@ def _display_judge_decision(decision: Dict[str, Any], config: AppConfig) -> None
     # Debug information
     if metadata.get("judge_model"):
         console.print(f"\n[dim]Judge Model: {metadata['judge_model']}[/dim]")
+
+
+def _display_error(error: Exception) -> None:
+    """Display a formatted error message using Rich."""
+    import traceback
+
+    error_panel = Panel.fit(
+        f"""[bold red]Exception Type:[/bold red] {type(error).__name__}
+
+[bold red]Message:[/bold red] {str(error)}
+
+[bold red]Call Stack:[/bold red]
+{traceback.format_exc()}""",
+        title="[red]⚠️  Debate Failed[/red]",
+        border_style="red",
+        padding=(1, 2),
+    )
+    console.print("\n")
+    console.print(error_panel)
+    console.print()
 
 
 def _display_individual_judge_decision(

@@ -36,8 +36,6 @@ class JudgingConfig(BaseModel):
 class SystemConfig(BaseModel):
     """System configuration."""
     api_base_url: str = Field(default="http://localhost:8000")
-    save_transcripts: bool = Field(default=True)
-    transcript_dir: str = Field(default="transcripts")
     log_level: str = Field(default="INFO")
     # Timeout configurations
     http_timeout_local: float = Field(default=120.0, description="HTTP timeout for local providers (Ollama)")

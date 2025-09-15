@@ -1,6 +1,17 @@
+<img src="./assets/logo.png" alt="Dialectus" width="500">
+
+<br />
+
 # Dialectus CLI
 
 Command-line interface for the Dialectus AI debate system.
+
+![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
+![Click](https://img.shields.io/badge/CLI-Click-F7931E.svg)
+![Rich](https://img.shields.io/badge/UI-Rich-FF6B6B.svg)
+![httpx](https://img.shields.io/badge/HTTP-httpx-4D77FF.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
+![Status](https://img.shields.io/badge/status-Production%20Ready-brightgreen.svg)
 
 ## Overview
 
@@ -204,7 +215,7 @@ Ensemble Decision (3 judges)
 
 ## Development
 
-This CLI was refactored from the original monolithic structure to be a standalone API client. It focuses on:
+This project is a standalone API client. It focuses on:
 
 - **Zero code duplication** with the backend
 - **API-first design** for consistency with web frontend

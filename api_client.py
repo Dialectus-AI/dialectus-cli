@@ -215,6 +215,9 @@ class DebateStreamHandler:
             error_msg = data.get("error", "Unknown judge error")
             logger.error(f"Judge error: {error_msg}")
 
+            # This should cause the debate to fail immediately
+            raise RuntimeError(f"Judge failed: {error_msg}")
+
         elif message_type == "debate_completed":
             self.is_complete = True
             logger.info("Debate completed")

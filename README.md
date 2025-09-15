@@ -119,9 +119,10 @@ Create a `debate_config.json` file:
   },
   "system": {
     "api_base_url": "http://localhost:8000",
-    "save_transcripts": true,
-    "transcript_dir": "transcripts",
-    "log_level": "INFO"
+    "log_level": "INFO",
+    "http_timeout_local": 120.0,
+    "http_timeout_remote": 30.0,
+    "websocket_timeout": 60.0
   }
 }
 ```
@@ -190,10 +191,10 @@ Debate Setup
 │ Word limit: 200                             │
 │                                             │
 │ Participants:                               │
-│ - model_a: qwen2.5:7b (analytical)         │
-│ - model_b: gpt-4o-mini (passionate)        │
+│ - model_a: qwen2.5:7b (analytical)          │
+│ - model_b: gpt-4o-mini (passionate)         │
 │                                             │
-│ Judging: Ensemble: 3 judges                │
+│ Judging: Ensemble: 3 judges                 │
 └─────────────────────────────────────────────┘
 
 🏆 WINNER: qwen2.5:7b

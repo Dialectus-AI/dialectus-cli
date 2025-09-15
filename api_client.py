@@ -113,6 +113,23 @@ class ApiClient:
         response.raise_for_status()
         return response.json()
 
+    async def get_transcripts(self, page: int = 1, limit: int = 20) -> Dict[str, Any]:
+        """Get paginated list of saved transcripts."""
+        response = await self.client.get(
+            f"{self.base_url}/api/transcripts",
+            params={"page": page, "limit": limit}
+        )
+        response.raise_for_status()
+        return response.json()
+
+    async def get_transcript_by_id(self, transcript_id: int) -> Dict[str, Any]:
+        """Get a specific transcript by ID."""
+        response = await self.client.get(
+            f"{self.base_url}/api/transcripts/{transcript_id}"
+        )
+        response.raise_for_status()
+        return response.json()
+
 
 class DebateStreamHandler:
     """Handle WebSocket debate streaming."""

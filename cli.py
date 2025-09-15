@@ -155,59 +155,69 @@ def list_models(ctx: click.Context) -> None:
 
 
 @cli.command()
-@click.option("--transcript-dir", "-d", help="Transcript directory path")
-def transcripts(transcript_dir: Optional[str]) -> None:
-    """List saved debate transcripts."""
+@click.option("--page", "-p", default=1, help="Page number (default: 1)")
+@click.option("--limit", "-l", default=20, help="Results per page (default: 20)")
+def transcripts(page: int, limit: int) -> None:
+    """List saved debate transcripts from API database."""
+    try:
+        asyncio.run(_list_transcripts(page, limit))
+    except Exception as e:
+        _display_error(e)
+        raise SystemExit(1)
+
+
+async def _list_transcripts(page: int, limit: int) -> None:
+    """List saved debate transcripts from API database."""
     config: AppConfig = click.get_current_context().obj["config"]
 
-    # Use provided directory or default from config
-    transcript_path = (
-        Path(transcript_dir) if transcript_dir else Path(config.system.transcript_dir)
+    api_client = ApiClient(
+        base_url=config.system.api_base_url,
+        http_timeout_local=config.system.http_timeout_local,
+        http_timeout_remote=config.system.http_timeout_remote,
     )
 
-    if not transcript_path.exists():
-        console.print(
-            f"[yellow]Transcript directory not found: {transcript_path}[/yellow]"
-        )
-        return
+    try:
+        response = await api_client.get_transcripts(page=page, limit=limit)
 
-    transcript_files = list(transcript_path.glob("*.json"))
+        transcripts = response["transcripts"]
+        pagination = response["pagination"]
 
-    if not transcript_files:
-        console.print(f"[yellow]No transcripts found in {transcript_path}[/yellow]")
-        return
+        if not transcripts:
+            console.print("[yellow]No transcripts found[/yellow]")
+            return
 
-    console.print(f"\n[bold]Found {len(transcript_files)} transcript(s):[/bold]\n")
+        console.print(f"\n[bold]Found {pagination['total']} transcript(s) (page {pagination['page']} of {pagination['total_pages']}):[/bold]\n")
 
-    table = Table(title="Debate Transcripts")
-    table.add_column("File", style="cyan")
-    table.add_column("Topic", style="green")
-    table.add_column("Format", style="blue")
-    table.add_column("Messages", justify="center")
-    table.add_column("Date", style="dim")
+        table = Table(title="Debate Transcripts")
+        table.add_column("ID", style="cyan", justify="center")
+        table.add_column("Topic", style="green")
+        table.add_column("Format", style="blue")
+        table.add_column("Messages", justify="center")
+        table.add_column("Date", style="dim")
 
-    for file_path in sorted(
-        transcript_files, key=lambda p: p.stat().st_mtime, reverse=True
-    ):
-        try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-
-            topic = data.get("topic", "Unknown")[:40]
-            if len(data.get("topic", "")) > 40:
+        for transcript in transcripts:
+            topic = transcript.get("topic", "Unknown")[:50]
+            if len(transcript.get("topic", "")) > 50:
                 topic += "..."
 
             table.add_row(
-                file_path.name,
+                str(transcript["id"]),
                 topic,
-                data.get("format", "Unknown"),
-                str(len(data.get("messages", []))),
-                file_path.stat().st_mtime.__format__("%Y-%m-%d %H:%M"),
+                transcript.get("format", "Unknown"),
+                str(transcript.get("message_count", 0)),
+                transcript.get("created_at", "Unknown"),
             )
-        except (json.JSONDecodeError, KeyError):
-            table.add_row(file_path.name, "Error reading", "", "", "")
 
-    console.print(table)
+        console.print(table)
+
+        # Show pagination info
+        if pagination["total_pages"] > 1:
+            console.print(f"\n[dim]Page {pagination['page']} of {pagination['total_pages']} | Total: {pagination['total']} transcripts[/dim]")
+            if pagination["has_next"]:
+                console.print(f"[dim]Use --page {pagination['page'] + 1} to see more[/dim]")
+
+    finally:
+        await api_client.close()
 
 
 def _categorize_model_size(model_name: str) -> str:
@@ -438,15 +448,12 @@ async def _run_debate_async(config: AppConfig, interactive: bool) -> None:
         except Exception as e:
             logger.error(f"WebSocket stream error: {e}")
 
-
     except Exception as e:
         console.print(f"[red]Error during debate: {e}[/red]")
         logger.exception("Debate execution failed")
 
     finally:
         await client.close()
-
-
 
 
 def _display_message(message: Dict[str, Any], config: AppConfig) -> None:
@@ -608,7 +615,9 @@ def _display_judge_decision(decision: Dict[str, Any], config: AppConfig) -> None
     if ensemble_size > 1 and individual_decisions:
         console.print(f"\n[bold blue]Individual Judge Decisions:[/bold blue]")
         for i, individual_decision in enumerate(individual_decisions, 1):
-            _display_individual_judge_decision(individual_decision, i, get_display_name, config)
+            _display_individual_judge_decision(
+                individual_decision, i, get_display_name, config
+            )
 
     # Debug information
     if metadata.get("judge_model"):
@@ -636,10 +645,15 @@ def _display_error(error: Exception) -> None:
 
 
 def _display_individual_judge_decision(
-    decision: Dict[str, Any], judge_number: int, get_display_name_func, config: AppConfig
+    decision: Dict[str, Any],
+    judge_number: int,
+    get_display_name_func,
+    config: AppConfig,
 ) -> None:
     """Display an individual judge's decision in ensemble judging."""
-    judge_model = decision.get("metadata", {}).get("judge_model", f"Judge {judge_number}")
+    judge_model = decision.get("metadata", {}).get(
+        "judge_model", f"Judge {judge_number}"
+    )
     winner_id = decision.get("winner_id", "unknown")
     winner_display_name = get_display_name_func(winner_id)
     winner_margin = decision.get("winner_margin", 0.0)
@@ -649,7 +663,9 @@ def _display_individual_judge_decision(
 
     if winner_margin > 0:
         victory_strength = _get_victory_strength(winner_margin)
-        console.print(f"[dim]Margin: {winner_margin:.1f} points ({victory_strength})[/dim]")
+        console.print(
+            f"[dim]Margin: {winner_margin:.1f} points ({victory_strength})[/dim]"
+        )
 
     # Individual judge's overall feedback
     overall_feedback = decision.get("overall_feedback")
@@ -660,7 +676,9 @@ def _display_individual_judge_decision(
     criterion_scores = decision.get("criterion_scores", [])
     if criterion_scores:
         # Create a compact table for individual judge scores
-        individual_table = Table(title=f"Judge {judge_number} Detailed Scoring", width=80)
+        individual_table = Table(
+            title=f"Judge {judge_number} Detailed Scoring", width=80
+        )
         individual_table.add_column("Participant", style="magenta", width=20)
         individual_table.add_column("Criterion", style="cyan", width=12)
         individual_table.add_column("Score", justify="center", style="yellow", width=6)
@@ -691,7 +709,9 @@ def _display_individual_judge_decision(
     # Individual judge's reasoning (if not structured data)
     reasoning = decision.get("reasoning")
     if reasoning and not _is_structured_data(reasoning):
-        console.print(f"[dim]Reasoning: {reasoning[:150]}{'...' if len(reasoning) > 150 else ''}[/dim]")
+        console.print(
+            f"[dim]Reasoning: {reasoning[:150]}{'...' if len(reasoning) > 150 else ''}[/dim]"
+        )
 
 
 if __name__ == "__main__":

@@ -32,8 +32,6 @@
   },
   "system": {
     "api_base_url": "http://localhost:8000",
-    "save_transcripts": true,
-    "transcript_dir": "transcripts",
     "log_level": "INFO",
     "http_timeout_local": 120.0,
     "http_timeout_remote": 30.0,

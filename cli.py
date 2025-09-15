@@ -430,8 +430,6 @@ async def _run_debate_async(config: AppConfig, interactive: bool) -> None:
         except Exception as e:
             logger.error(f"WebSocket stream error: {e}")
 
-        # Display final summary
-        await _display_final_summary(stream_handler)
 
     except Exception as e:
         console.print(f"[red]Error during debate: {e}[/red]")
@@ -441,54 +439,6 @@ async def _run_debate_async(config: AppConfig, interactive: bool) -> None:
         await client.close()
 
 
-async def _display_final_summary(stream_handler: DebateStreamHandler) -> None:
-    """Display final debate summary statistics."""
-    total_messages = len(stream_handler.messages)
-    if total_messages > 0:
-        console.print(f"\n[bold blue]Debate Summary[/bold blue]")
-
-        # Calculate statistics
-        message_counts: Dict[str, int] = {}
-        total_words = 0
-
-        for message in stream_handler.messages:
-            speaker_id = message.get("speaker_id", "unknown")
-            if speaker_id not in message_counts:
-                message_counts[speaker_id] = 0
-            message_counts[speaker_id] += 1
-            content = message.get("content", "")
-            total_words += len(content.split())
-
-        from rich.table import Table
-
-        results_table = Table(title="Final Statistics")
-        results_table.add_column("Speaker", style="cyan")
-        results_table.add_column("Messages", justify="center")
-        results_table.add_column("Avg Words", justify="center")
-
-        for speaker_id, count in message_counts.items():
-            speaker_messages = [
-                m for m in stream_handler.messages if m.get("speaker_id") == speaker_id
-            ]
-            if speaker_messages:
-                avg_words = sum(
-                    len(m.get("content", "").split()) for m in speaker_messages
-                ) / len(speaker_messages)
-            else:
-                avg_words = 0.0
-            results_table.add_row(speaker_id, str(count), f"{avg_words:.1f}")
-
-        console.print(results_table)
-        console.print(
-            f"\n[dim]Total: {total_messages} messages, {total_words} words[/dim]"
-        )
-
-        # Display judge decision if available
-        if not stream_handler.judge_decision:
-            console.print(f"\n[yellow]No judge decision received[/yellow]")
-            console.print(
-                "[dim]This may indicate an issue with the judging system or configuration.[/dim]"
-            )
 
 
 def _display_message(message: Dict[str, Any], config: AppConfig) -> None:

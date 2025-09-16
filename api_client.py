@@ -1,10 +1,8 @@
 """HTTP client for communicating with Dialectus Engine API."""
 
-import asyncio
 import json
 import logging
-from typing import Dict, Any, List, Optional, TYPE_CHECKING
-from pathlib import Path
+from typing import Any, TYPE_CHECKING, TypedDict
 
 import httpx
 import websockets
@@ -12,7 +10,21 @@ from websockets.exceptions import ConnectionClosed
 from pydantic import BaseModel
 
 if TYPE_CHECKING:
-    from websockets import WebSocketClientProtocol
+    from websockets.asyncio.client import ClientConnection
+
+
+class ModelProviderConfig(TypedDict):
+    """Configuration for a model provider (simplified for timeout detection)."""
+    provider: str
+
+
+class FullModelConfig(TypedDict):
+    """Complete model configuration for debate setup (matches web interface ModelInfo)."""
+    name: str
+    provider: str
+    personality: str
+    max_tokens: int
+    temperature: float
 
 logger = logging.getLogger(__name__)
 
@@ -23,8 +35,8 @@ class DebateSetupRequest(BaseModel):
     topic: str
     format: str
     word_limit: int
-    models: Dict[str, Dict[str, Any]]
-    judge_models: List[str]
+    models: dict[str, FullModelConfig]
+    judge_models: list[str]
     judge_provider: str
 
 
@@ -33,7 +45,7 @@ class DebateResponse(BaseModel):
 
     id: str
     status: str
-    config: Optional[Dict[str, Any]] = None
+    config: dict[str, object] | None = None
 
 
 class ApiClient:
@@ -42,7 +54,7 @@ class ApiClient:
     def __init__(
         self,
         base_url: str,
-        models_config: Optional[Dict[str, Dict[str, Any]]] = None,
+        models_config: dict[str, ModelProviderConfig] | None = None,
         http_timeout_local: float = 120.0,
         http_timeout_remote: float = 30.0,
     ) -> None:
@@ -56,7 +68,7 @@ class ApiClient:
 
     def _determine_timeout(
         self,
-        models_config: Optional[Dict[str, Dict[str, Any]]],
+        models_config: dict[str, ModelProviderConfig] | None,
         timeout_local: float,
         timeout_remote: float,
     ) -> float:
@@ -66,7 +78,7 @@ class ApiClient:
 
         # Check if any models use Ollama (local provider)
         has_ollama = any(
-            model_config.get("provider") == "ollama"
+            model_config["provider"] == "ollama"
             for model_config in models_config.values()
         )
 
@@ -76,7 +88,7 @@ class ApiClient:
         """Close the HTTP client."""
         await self.client.aclose()
 
-    async def get_models(self) -> List[str]:
+    async def get_models(self) -> list[str]:
         """Get available models from the API."""
         response = await self.client.get(f"{self.base_url}/api/models")
         response.raise_for_status()
@@ -99,13 +111,13 @@ class ApiClient:
         )
         response.raise_for_status()
 
-    async def get_debate_status(self, debate_id: str) -> Dict[str, Any]:
+    async def get_debate_status(self, debate_id: str) -> dict[str, Any]:
         """Get debate status."""
         response = await self.client.get(f"{self.base_url}/api/debates/{debate_id}")
         response.raise_for_status()
         return response.json()
 
-    async def get_debate_transcript(self, debate_id: str) -> Dict[str, Any]:
+    async def get_debate_transcript(self, debate_id: str) -> dict[str, Any]:
         """Get debate transcript."""
         response = await self.client.get(
             f"{self.base_url}/api/debates/{debate_id}/transcript"
@@ -113,16 +125,15 @@ class ApiClient:
         response.raise_for_status()
         return response.json()
 
-    async def get_transcripts(self, page: int = 1, limit: int = 20) -> Dict[str, Any]:
+    async def get_transcripts(self, page: int = 1, limit: int = 20) -> dict[str, Any]:
         """Get paginated list of saved transcripts."""
         response = await self.client.get(
-            f"{self.base_url}/api/transcripts",
-            params={"page": page, "limit": limit}
+            f"{self.base_url}/api/transcripts", params={"page": page, "limit": limit}
         )
         response.raise_for_status()
         return response.json()
 
-    async def get_transcript_by_id(self, transcript_id: int) -> Dict[str, Any]:
+    async def get_transcript_by_id(self, transcript_id: int) -> dict[str, Any]:
         """Get a specific transcript by ID."""
         response = await self.client.get(
             f"{self.base_url}/api/transcripts/{transcript_id}"
@@ -145,9 +156,9 @@ class DebateStreamHandler:
         self.ws_url = base_url.replace("http://", "ws://").replace("https://", "wss://")
         self.debate_id = debate_id
         self.websocket_timeout = websocket_timeout
-        self.websocket: Optional["WebSocketClientProtocol"] = None
-        self.messages: List[Dict[str, Any]] = []
-        self.judge_decision: Optional[Dict[str, Any]] = None
+        self.websocket: ClientConnection | None = None
+        self.messages: list[dict[str, Any]] = []
+        self.judge_decision: dict[str, Any] | None = None
         self.is_complete = False
         self.message_callback = message_callback
         self.judge_callback = judge_callback
@@ -187,7 +198,7 @@ class DebateStreamHandler:
             logger.error(f"WebSocket error: {e}")
             raise
 
-    async def _handle_message(self, data: Dict[str, Any]) -> None:
+    async def _handle_message(self, data: dict[str, Any]) -> None:
         """Handle incoming WebSocket message."""
         message_type = data.get("type")
         logger.debug(f"Received WebSocket message: {message_type}")
@@ -223,7 +234,9 @@ class DebateStreamHandler:
             exception_type = data.get("exception_type", "Exception")
             exception_message = data.get("exception_message", "")
 
-            logger.error(f"MODEL ERROR: {speaker_id} ({model_name}) via {provider} failed in {phase}: {exception_type}: {exception_message}")
+            logger.error(
+                f"MODEL ERROR: {speaker_id} ({model_name}) via {provider} failed in {phase}: {exception_type}: {exception_message}"
+            )
 
             # This should cause the debate to fail immediately
             raise RuntimeError(f"Model failed: {error_msg}")

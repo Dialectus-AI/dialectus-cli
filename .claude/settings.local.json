@@ -3,10 +3,15 @@
     "allow": [
       "Read(//g/AI/repos/dialectus-engine/**)",
       "Read(//g/AI/repos/dialectus-web/src/components/**)",
-      "Bash(python cli.py:*)",
       "Read(//g/AI/repos/dialectus-web/**)"
     ],
-    "deny": [],
-    "ask": []
+    "deny": [
+      "Read(G:\\AI\\repos)"
+    ],
+    "ask": [],
+    "additionalDirectories": [
+      "G:\\AI\\repos\\dialectus-web",
+      "G:\\AI\\repos\\dialectus-cli"
+    ]
   }
 }

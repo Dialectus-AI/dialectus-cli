@@ -4,7 +4,7 @@ import asyncio
 import json
 import re
 from pathlib import Path
-from typing import Optional, Dict, Any, List, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 import logging
 
 import click
@@ -52,7 +52,7 @@ def setup_logging(level: str = "INFO") -> None:
     type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR"]),
 )
 @click.pass_context
-def cli(ctx: click.Context, config: Optional[str], log_level: str) -> None:
+def cli(ctx: click.Context, config: str | None, log_level: str) -> None:
     """Dialectus - AI-powered debate orchestration via API."""
     setup_logging(log_level)
 
@@ -76,14 +76,12 @@ def cli(ctx: click.Context, config: Optional[str], log_level: str) -> None:
     type=click.Choice(["parliamentary", "oxford", "socratic"]),
     help="Debate format",
 )
-@click.option("--rounds", "-r", type=int, help="Number of rounds")
 @click.option("--interactive", "-i", is_flag=True, help="Interactive mode with pauses")
 @click.pass_context
 def debate(
     ctx: click.Context,
-    topic: Optional[str],
-    format: Optional[str],
-    rounds: Optional[int],
+    topic: str | None,
+    format: str | None,
     interactive: bool,
 ) -> None:
     """Start a debate between AI models."""
@@ -105,7 +103,7 @@ def debate(
 
     # Run the debate with top-level exception handling
     try:
-        asyncio.run(_run_debate_async(config, interactive))
+        asyncio.run(_run_debate_async(config))
     except Exception as e:
         _display_error(e)
         raise SystemExit(1)
@@ -283,7 +281,7 @@ def _format_judge_info(config: AppConfig) -> str:
         return judge_info
 
 
-def _format_judge_decision_info(judge_decision: Dict[str, Any]) -> str:
+def _format_judge_decision_info(judge_decision: dict[str, Any]) -> str:
     """Format judge decision display info."""
     metadata = judge_decision.get("metadata", {})
     ensemble_size = metadata.get("ensemble_size", 0)
@@ -311,13 +309,13 @@ def _get_victory_strength(margin: float) -> str:
         return "Decisive Victory"
 
 
-def _check_incomplete_scoring(criterion_scores: List[Dict[str, Any]]) -> bool:
+def _check_incomplete_scoring(criterion_scores: list[dict[str, Any]]) -> bool:
     """Check if scoring is incomplete (missing categories for participants)."""
     if not criterion_scores:
         return True
 
     # Group by participant to check category counts
-    participant_counts: Dict[str, int] = {}
+    participant_counts: dict[str, int] = {}
     for score in criterion_scores:
         participant_id = score.get("participant_id")
         if participant_id:
@@ -353,11 +351,12 @@ def _is_structured_data(text: str) -> bool:
     return any(re.search(pattern, text, re.DOTALL) for pattern in dict_patterns)
 
 
-async def _run_debate_async(config: AppConfig, interactive: bool) -> None:
+async def _run_debate_async(config: AppConfig) -> None:
     """Run the debate asynchronously via API."""
     # Pass models config and timeout settings to ApiClient
-    models_config = {
-        model_id: {"provider": model_config.provider}
+    from api_client import ModelProviderConfig
+    models_config: dict[str, ModelProviderConfig] = {
+        model_id: ModelProviderConfig(provider=model_config.provider)
         for model_id, model_config in config.models.items()
     }
     client = ApiClient(
@@ -401,11 +400,11 @@ async def _run_debate_async(config: AppConfig, interactive: bool) -> None:
         console.print(f"[green]OK[/green] Connecting to debate stream...")
 
         # Set up the stream handler first
-        def on_message_received(message: Dict[str, Any]) -> None:
+        def on_message_received(message: dict[str, Any]) -> None:
             """Display message immediately when received."""
             _display_message(message, config)
 
-        def on_judge_decision(decision: Dict[str, Any]) -> None:
+        def on_judge_decision(decision: dict[str, Any]) -> None:
             """Display judge decision immediately when received."""
             logger.info(
                 f"Judge callback invoked - displaying results. Decision keys: {list(decision.keys()) if decision else 'None'}"
@@ -456,7 +455,7 @@ async def _run_debate_async(config: AppConfig, interactive: bool) -> None:
         await client.close()
 
 
-def _display_message(message: Dict[str, Any], config: AppConfig) -> None:
+def _display_message(message: dict[str, Any], config: AppConfig) -> None:
     """Display a debate message with formatting."""
     style_map = {"pro": "green", "con": "red", "neutral": "blue"}
 
@@ -483,7 +482,7 @@ def _display_message(message: Dict[str, Any], config: AppConfig) -> None:
     console.print()  # Add spacing
 
 
-def _display_judge_decision(decision: Dict[str, Any], config: AppConfig) -> None:
+def _display_judge_decision(decision: dict[str, Any], config: AppConfig) -> None:
     """Display AI judge decision with detailed scoring."""
     if not decision:
         console.print("[red]No judge decision data received[/red]")
@@ -592,7 +591,7 @@ def _display_judge_decision(decision: Dict[str, Any], config: AppConfig) -> None
         for line in reasoning_lines:
             if len(line) > 100:
                 words = line.split()
-                current_line: List[str] = []
+                current_line: list[str] = []
                 for word in words:
                     if len(" ".join(current_line + [word])) <= 100:
                         current_line.append(word)
@@ -616,7 +615,7 @@ def _display_judge_decision(decision: Dict[str, Any], config: AppConfig) -> None
         console.print(f"\n[bold blue]Individual Judge Decisions:[/bold blue]")
         for i, individual_decision in enumerate(individual_decisions, 1):
             _display_individual_judge_decision(
-                individual_decision, i, get_display_name, config
+                individual_decision, i, get_display_name
             )
 
     # Debug information
@@ -645,10 +644,9 @@ def _display_error(error: Exception) -> None:
 
 
 def _display_individual_judge_decision(
-    decision: Dict[str, Any],
+    decision: dict[str, Any],
     judge_number: int,
     get_display_name_func,
-    config: AppConfig,
 ) -> None:
     """Display an individual judge's decision in ensemble judging."""
     judge_model = decision.get("metadata", {}).get(

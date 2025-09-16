@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from typing import Dict, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING
 from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
@@ -28,9 +28,9 @@ class DebateConfig(BaseModel):
 
 class JudgingConfig(BaseModel):
     """Judging configuration."""
-    judge_models: List[str]
+    judge_models: list[str]
     judge_provider: str
-    criteria: List[str]
+    criteria: list[str]
 
 
 class SystemConfig(BaseModel):
@@ -46,7 +46,7 @@ class SystemConfig(BaseModel):
 class AppConfig(BaseModel):
     """Complete application configuration."""
     debate: DebateConfig
-    models: Dict[str, ModelConfig]
+    models: dict[str, ModelConfig]
     judging: JudgingConfig
     system: SystemConfig
 

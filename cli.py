@@ -4,7 +4,7 @@ import asyncio
 import json
 import re
 from pathlib import Path
-from typing import Any, TYPE_CHECKING
+from typing import Any
 import logging
 
 import click
@@ -16,9 +16,6 @@ from rich.prompt import Confirm
 
 from config import AppConfig, get_default_config
 from api_client import ApiClient, DebateSetupRequest, DebateStreamHandler
-
-if TYPE_CHECKING:
-    pass
 
 console = Console(force_terminal=True, legacy_windows=True)
 logger = logging.getLogger(__name__)
@@ -184,7 +181,9 @@ async def _list_transcripts(page: int, limit: int) -> None:
             console.print("[yellow]No transcripts found[/yellow]")
             return
 
-        console.print(f"\n[bold]Found {pagination['total']} transcript(s) (page {pagination['page']} of {pagination['total_pages']}):[/bold]\n")
+        console.print(
+            f"\n[bold]Found {pagination['total']} transcript(s) (page {pagination['page']} of {pagination['total_pages']}):[/bold]\n"
+        )
 
         table = Table(title="Debate Transcripts")
         table.add_column("ID", style="cyan", justify="center")
@@ -210,9 +209,13 @@ async def _list_transcripts(page: int, limit: int) -> None:
 
         # Show pagination info
         if pagination["total_pages"] > 1:
-            console.print(f"\n[dim]Page {pagination['page']} of {pagination['total_pages']} | Total: {pagination['total']} transcripts[/dim]")
+            console.print(
+                f"\n[dim]Page {pagination['page']} of {pagination['total_pages']} | Total: {pagination['total']} transcripts[/dim]"
+            )
             if pagination["has_next"]:
-                console.print(f"[dim]Use --page {pagination['page'] + 1} to see more[/dim]")
+                console.print(
+                    f"[dim]Use --page {pagination['page'] + 1} to see more[/dim]"
+                )
 
     finally:
         await api_client.close()
@@ -355,6 +358,7 @@ async def _run_debate_async(config: AppConfig) -> None:
     """Run the debate asynchronously via API."""
     # Pass models config and timeout settings to ApiClient
     from api_client import ModelProviderConfig
+
     models_config: dict[str, ModelProviderConfig] = {
         model_id: ModelProviderConfig(provider=model_config.provider)
         for model_id, model_config in config.models.items()
@@ -614,9 +618,7 @@ def _display_judge_decision(decision: dict[str, Any], config: AppConfig) -> None
     if ensemble_size > 1 and individual_decisions:
         console.print(f"\n[bold blue]Individual Judge Decisions:[/bold blue]")
         for i, individual_decision in enumerate(individual_decisions, 1):
-            _display_individual_judge_decision(
-                individual_decision, i, get_display_name
-            )
+            _display_individual_judge_decision(individual_decision, i, get_display_name)
 
     # Debug information
     if metadata.get("judge_model"):

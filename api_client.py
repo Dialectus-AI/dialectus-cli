@@ -90,7 +90,7 @@ class ApiClient:
 
     async def get_models(self) -> list[str]:
         """Get available models from the API."""
-        response = await self.client.get(f"{self.base_url}/api/models")
+        response = await self.client.get(f"{self.base_url}/models")
         response.raise_for_status()
         data = response.json()
         return data["models"]
@@ -98,7 +98,7 @@ class ApiClient:
     async def create_debate(self, setup: DebateSetupRequest) -> DebateResponse:
         """Create a new debate."""
         response = await self.client.post(
-            f"{self.base_url}/api/debates", json=setup.model_dump()
+            f"{self.base_url}/debates", json=setup.model_dump()
         )
         response.raise_for_status()
         data = response.json()
@@ -107,20 +107,20 @@ class ApiClient:
     async def start_debate(self, debate_id: str) -> None:
         """Start a debate."""
         response = await self.client.post(
-            f"{self.base_url}/api/debates/{debate_id}/start"
+            f"{self.base_url}/debates/{debate_id}/start"
         )
         response.raise_for_status()
 
     async def get_debate_status(self, debate_id: str) -> dict[str, Any]:
         """Get debate status."""
-        response = await self.client.get(f"{self.base_url}/api/debates/{debate_id}")
+        response = await self.client.get(f"{self.base_url}/debates/{debate_id}")
         response.raise_for_status()
         return response.json()
 
     async def get_debate_transcript(self, debate_id: str) -> dict[str, Any]:
         """Get debate transcript."""
         response = await self.client.get(
-            f"{self.base_url}/api/debates/{debate_id}/transcript"
+            f"{self.base_url}/debates/{debate_id}/transcript"
         )
         response.raise_for_status()
         return response.json()
@@ -128,7 +128,7 @@ class ApiClient:
     async def get_transcripts(self, page: int = 1, limit: int = 20) -> dict[str, Any]:
         """Get paginated list of saved transcripts."""
         response = await self.client.get(
-            f"{self.base_url}/api/transcripts", params={"page": page, "limit": limit}
+            f"{self.base_url}/transcripts", params={"page": page, "limit": limit}
         )
         response.raise_for_status()
         return response.json()
@@ -136,7 +136,7 @@ class ApiClient:
     async def get_transcript_by_id(self, transcript_id: int) -> dict[str, Any]:
         """Get a specific transcript by ID."""
         response = await self.client.get(
-            f"{self.base_url}/api/transcripts/{transcript_id}"
+            f"{self.base_url}/transcripts/{transcript_id}"
         )
         response.raise_for_status()
         return response.json()

@@ -71,6 +71,14 @@ transcripts/
 *.db
 *.sqlite
 
+# Local agent metadata
+AGENTS.md
+CLAUDE.md
+.claude/
+
+# Local engine builds
+deps/
+
 # Temporary folders
 tmp/
 temp/

@@ -22,7 +22,9 @@
     }
   },
   "judging": {
-    "judge_models": ["openthinker:7b"],
+    "judge_models": [
+      "openthinker:7b"
+    ],
     "judge_provider": "ollama",
     "criteria": [
       "logic",
@@ -31,10 +33,25 @@
     ]
   },
   "system": {
-    "api_base_url": "http://localhost:8000",
-    "log_level": "INFO",
-    "http_timeout_local": 120.0,
-    "http_timeout_remote": 30.0,
-    "websocket_timeout": 60.0
+    "ollama_base_url": "http://localhost:11434",
+    "ollama": {
+      "num_gpu_layers": -1,
+      "gpu_memory_utilization": null,
+      "main_gpu": null,
+      "num_thread": null,
+      "keep_alive": "5m",
+      "repeat_penalty": 1.1
+    },
+    "openrouter": {
+      "api_key": null,
+      "base_url": "https://openrouter.ai/api/v1",
+      "site_url": "https://dialectus.ai",
+      "app_name": "Dialectus AI",
+      "max_retries": 3,
+      "timeout": 60
+    },
+    "log_level": "WARNING",
+    "debate_topic_source": "openrouter",
+    "debate_topic_model": "anthropic/claude-3-haiku"
   }
 }

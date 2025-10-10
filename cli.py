@@ -3,9 +3,14 @@
 import asyncio
 import json
 import re
-from pathlib import Path
-from typing import Any
 import logging
+import os
+from collections.abc import Mapping as MappingCollection
+from pathlib import Path
+from typing import Any, Mapping, Protocol, cast
+
+# Ensure UTF-8 encoding for cross-platform compatibility (Windows console, Git Bash, etc.)
+os.environ['PYTHONIOENCODING'] = 'utf-8'
 
 import click
 from rich.console import Console
@@ -14,19 +19,52 @@ from rich.table import Table
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.prompt import Confirm
 
-from config import AppConfig, get_default_config
-from api_client import ApiClient, DebateSetupRequest, DebateStreamHandler
+from cli_config import AppConfig, get_default_config
+from debate_runner import DebateRunner
+from database import DatabaseManager
+from models.manager import ModelManager
+from models.providers import ProviderRateLimitError
 
-console = Console(force_terminal=True, legacy_windows=True)
+
+class ModelInfo(Protocol):
+    provider: str
+    description: str
+
+
+console = Console(force_terminal=True, legacy_windows=False)
 logger = logging.getLogger(__name__)
 
 
-def setup_logging(level: str = "INFO") -> None:
-    """Configure logging for the application."""
+def setup_logging(level: str = "WARNING") -> None:
+    """Configure logging for the application with colored output."""
+    # Custom formatter with colors for severity levels
+    class ColoredFormatter(logging.Formatter):
+        """Formatter that adds colors to log levels."""
+
+        COLORS = {
+            'DEBUG': '\033[90m',      # Gray/dim
+            'INFO': '',               # Default (no color)
+            'WARNING': '\033[33m',    # Yellow/orange
+            'ERROR': '\033[31m',      # Red
+            'CRITICAL': '\033[1;31m', # Bold red
+        }
+        RESET = '\033[0m'
+
+        def format(self, record: logging.LogRecord) -> str:
+            color = self.COLORS.get(record.levelname, '')
+            record.levelname = f"{color}{record.levelname}{self.RESET}"
+            return super().format(record)
+
+    # Configure basic logging
+    handler = logging.StreamHandler()
+    handler.setFormatter(ColoredFormatter(
+        fmt="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        datefmt="%H:%M:%S",
+    ))
+
     logging.basicConfig(
         level=getattr(logging, level.upper()),
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        datefmt="%H:%M:%S",
+        handlers=[handler],
     )
 
     # Suppress noisy third-party loggers
@@ -45,21 +83,24 @@ def setup_logging(level: str = "INFO") -> None:
 )
 @click.option(
     "--log-level",
-    default="INFO",
+    default=None,
     type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR"]),
+    help="Override log level from config file",
 )
 @click.pass_context
-def cli(ctx: click.Context, config: str | None, log_level: str) -> None:
-    """Dialectus - AI-powered debate orchestration via API."""
-    setup_logging(log_level)
-
-    # Load configuration
+def cli(ctx: click.Context, config: str | None, log_level: str | None) -> None:
+    """Dialectus - AI-powered debate orchestration using dialectus-engine."""
+    # Load configuration first
     if config:
         app_config = AppConfig.load_from_file(Path(config))
         console.print(f"[green]OK[/green] Loaded config from {config}")
     else:
         app_config = get_default_config()
         console.print("[green]OK[/green] Loaded default config from debate_config.json")
+
+    # Use CLI log level if provided, otherwise use config file value
+    effective_log_level = log_level if log_level is not None else app_config.system.log_level
+    setup_logging(effective_log_level)
 
     ctx.ensure_object(dict)
     ctx.obj["config"] = app_config
@@ -70,7 +111,7 @@ def cli(ctx: click.Context, config: str | None, log_level: str) -> None:
 @click.option(
     "--format",
     "-f",
-    type=click.Choice(["parliamentary", "oxford", "socratic"]),
+    type=click.Choice(["parliamentary", "oxford", "socratic", "public_forum"]),
     help="Debate format",
 )
 @click.option("--interactive", "-i", is_flag=True, help="Interactive mode with pauses")
@@ -81,14 +122,13 @@ def debate(
     format: str | None,
     interactive: bool,
 ) -> None:
-    """Start a debate between AI models."""
+    """Start a debate between AI models using the engine directly."""
     config: AppConfig = ctx.obj["config"]
 
     # Override config with CLI options
     if topic:
         config.debate.topic = topic
     if format:
-        # Type checked by click.Choice, safe to cast
         config.debate.format = format  # type: ignore[assignment]
 
     # Display debate setup
@@ -98,9 +138,10 @@ def debate(
         console.print("[yellow]Debate cancelled[/yellow]")
         return
 
-    # Run the debate with top-level exception handling
+    # Run the debate with direct engine integration
     try:
-        asyncio.run(_run_debate_async(config))
+        runner = DebateRunner(config, console)
+        asyncio.run(runner.run_debate())
     except Exception as e:
         _display_error(e)
         raise SystemExit(1)
@@ -109,38 +150,50 @@ def debate(
 @cli.command()
 @click.pass_context
 def list_models(ctx: click.Context) -> None:
-    """List available models from the API."""
+    """List available models from Ollama and OpenRouter."""
     config: AppConfig = ctx.obj["config"]
 
     async def _list_models() -> None:
-        client = ApiClient(config.system.api_base_url)
+        model_manager = ModelManager(config.system)
 
         try:
             with Progress(
                 SpinnerColumn(), TextColumn("[progress.description]{task.description}")
             ) as progress:
                 task = progress.add_task("Fetching available models...", total=None)
-                models = await client.get_models()
+                raw_models = await model_manager.get_available_models()
+
+                if not isinstance(raw_models, MappingCollection):
+                    raise TypeError(
+                        f"Unexpected model listing payload type: {type(raw_models)!r}"
+                    )
+
+                models = cast(Mapping[str, ModelInfo], raw_models)
                 progress.remove_task(task)
 
             if not models:
                 console.print(
-                    "[red]No models available. Make sure the engine API is running.[/red]"
+                    "[red]No models available. Make sure Ollama is running or OpenRouter is configured.[/red]"
                 )
                 return
 
             table = Table(title="Available Models")
-            table.add_column("Model Name", style="cyan")
-            table.add_column("Size Category", style="magenta")
+            table.add_column("Model ID", style="cyan")
+            table.add_column("Provider", style="magenta")
+            table.add_column("Description", style="dim")
 
-            for model in sorted(models):
-                size_cat = _categorize_model_size(model)
-                table.add_row(model, size_cat)
+            for model_id, model_info in sorted(models.items()):
+                table.add_row(
+                    model_id,
+                    model_info.provider,
+                    model_info.description[:60] + "..." if len(model_info.description) > 60 else model_info.description
+                )
 
             console.print(table)
 
-        finally:
-            await client.close()
+        except Exception as e:
+            console.print(f"[red]Failed to fetch models: {e}[/red]")
+            raise
 
     try:
         asyncio.run(_list_models())
@@ -150,40 +203,18 @@ def list_models(ctx: click.Context) -> None:
 
 
 @cli.command()
-@click.option("--page", "-p", default=1, help="Page number (default: 1)")
-@click.option("--limit", "-l", default=20, help="Results per page (default: 20)")
-def transcripts(page: int, limit: int) -> None:
-    """List saved debate transcripts from API database."""
+@click.option("--limit", "-l", default=20, help="Number of transcripts to show (default: 20)")
+def transcripts(limit: int) -> None:
+    """List saved debate transcripts from local database."""
     try:
-        asyncio.run(_list_transcripts(page, limit))
-    except Exception as e:
-        _display_error(e)
-        raise SystemExit(1)
+        db = DatabaseManager()
+        transcript_list = db.list_transcripts(limit=limit)
 
-
-async def _list_transcripts(page: int, limit: int) -> None:
-    """List saved debate transcripts from API database."""
-    config: AppConfig = click.get_current_context().obj["config"]
-
-    api_client = ApiClient(
-        base_url=config.system.api_base_url,
-        http_timeout_local=config.system.http_timeout_local,
-        http_timeout_remote=config.system.http_timeout_remote,
-    )
-
-    try:
-        response = await api_client.get_transcripts(page=page, limit=limit)
-
-        transcripts = response["transcripts"]
-        pagination = response["pagination"]
-
-        if not transcripts:
+        if not transcript_list:
             console.print("[yellow]No transcripts found[/yellow]")
             return
 
-        console.print(
-            f"\n[bold]Found {pagination['total']} transcript(s) (page {pagination['page']} of {pagination['total_pages']}):[/bold]\n"
-        )
+        console.print(f"\n[bold]Found {len(transcript_list)} transcript(s):[/bold]\n")
 
         table = Table(title="Debate Transcripts")
         table.add_column("ID", style="cyan", justify="center")
@@ -192,7 +223,7 @@ async def _list_transcripts(page: int, limit: int) -> None:
         table.add_column("Messages", justify="center")
         table.add_column("Date", style="dim")
 
-        for transcript in transcripts:
+        for transcript in transcript_list:
             topic = transcript.get("topic", "Unknown")[:50]
             if len(transcript.get("topic", "")) > 50:
                 topic += "..."
@@ -207,31 +238,9 @@ async def _list_transcripts(page: int, limit: int) -> None:
 
         console.print(table)
 
-        # Show pagination info
-        if pagination["total_pages"] > 1:
-            console.print(
-                f"\n[dim]Page {pagination['page']} of {pagination['total_pages']} | Total: {pagination['total']} transcripts[/dim]"
-            )
-            if pagination["has_next"]:
-                console.print(
-                    f"[dim]Use --page {pagination['page'] + 1} to see more[/dim]"
-                )
-
-    finally:
-        await api_client.close()
-
-
-def _categorize_model_size(model_name: str) -> str:
-    """Categorize model by size for display."""
-    model_lower = model_name.lower()
-    if "3b" in model_lower or "mini" in model_lower:
-        return "3B (Light)"
-    elif "7b" in model_lower:
-        return "7B (Medium)"
-    elif "13b" in model_lower or "14b" in model_lower:
-        return "13B+ (Heavy)"
-    else:
-        return "Unknown"
+    except Exception as e:
+        _display_error(e)
+        raise SystemExit(1)
 
 
 def _display_debate_info(config: AppConfig) -> None:
@@ -352,138 +361,6 @@ def _is_structured_data(text: str) -> bool:
     ]
 
     return any(re.search(pattern, text, re.DOTALL) for pattern in dict_patterns)
-
-
-async def _run_debate_async(config: AppConfig) -> None:
-    """Run the debate asynchronously via API."""
-    # Pass models config and timeout settings to ApiClient
-    from api_client import ModelProviderConfig
-
-    models_config: dict[str, ModelProviderConfig] = {
-        model_id: ModelProviderConfig(provider=model_config.provider)
-        for model_id, model_config in config.models.items()
-    }
-    client = ApiClient(
-        config.system.api_base_url,
-        models_config,
-        config.system.http_timeout_local,
-        config.system.http_timeout_remote,
-    )
-
-    try:
-        # Create debate setup request
-        setup = DebateSetupRequest(
-            topic=config.debate.topic,
-            format=config.debate.format,
-            word_limit=config.debate.word_limit,
-            models={
-                model_id: {
-                    "name": model_config.name,
-                    "provider": model_config.provider,
-                    "personality": model_config.personality,
-                    "max_tokens": model_config.max_tokens,
-                    "temperature": model_config.temperature,
-                }
-                for model_id, model_config in config.models.items()
-            },
-            judge_models=config.judging.judge_models,
-            judge_provider=config.judging.judge_provider,
-        )
-
-        # Create debate
-        with Progress(
-            SpinnerColumn(), TextColumn("[progress.description]{task.description}")
-        ) as progress:
-            task = progress.add_task("Creating debate...", total=None)
-            debate_response = await client.create_debate(setup)
-            progress.remove_task(task)
-
-        console.print(f"[green]OK[/green] Debate created: {debate_response.id}")
-
-        # Connect to WebSocket BEFORE starting the debate to catch all messages
-        console.print(f"[green]OK[/green] Connecting to debate stream...")
-
-        # Set up the stream handler first
-        def on_message_received(message: dict[str, Any]) -> None:
-            """Display message immediately when received."""
-            _display_message(message, config)
-
-        def on_judge_decision(decision: dict[str, Any]) -> None:
-            """Display judge decision immediately when received."""
-            logger.info(
-                f"Judge callback invoked - displaying results. Decision keys: {list(decision.keys()) if decision else 'None'}"
-            )
-            console.print("\n" + "=" * 50)
-            console.print("[bold yellow]🏛️ JUDGE DECISION RECEIVED[/bold yellow]")
-            console.print("=" * 50)
-            _display_judge_decision(decision, config)
-
-        stream_handler = DebateStreamHandler(
-            config.system.api_base_url,
-            debate_response.id,
-            config.system.websocket_timeout,
-            message_callback=on_message_received,
-            judge_callback=on_judge_decision,
-        )
-
-        # Start WebSocket connection in background
-        import asyncio
-
-        websocket_task = asyncio.create_task(stream_handler.connect_and_stream())
-
-        # Give WebSocket time to connect
-        await asyncio.sleep(1.0)
-
-        # Now start the debate
-        with Progress(
-            SpinnerColumn(), TextColumn("[progress.description]{task.description}")
-        ) as progress:
-            task = progress.add_task("Starting debate...", total=None)
-            await client.start_debate(debate_response.id)
-            progress.remove_task(task)
-
-        console.print(f"[green]OK[/green] Debate started")
-        console.print("\n[bold blue]Live Debate Feed[/bold blue]")
-
-        # Wait for WebSocket to complete
-        try:
-            await websocket_task
-        except Exception as e:
-            logger.error(f"WebSocket stream error: {e}")
-
-    except Exception as e:
-        console.print(f"[red]Error during debate: {e}[/red]")
-        logger.exception("Debate execution failed")
-
-    finally:
-        await client.close()
-
-
-def _display_message(message: dict[str, Any], config: AppConfig) -> None:
-    """Display a debate message with formatting."""
-    style_map = {"pro": "green", "con": "red", "neutral": "blue"}
-
-    position = message.get("position", "neutral")
-    speaker_style = style_map.get(position, "white")
-
-    # Get actual model name from config, fallback to speaker_id if not found
-    speaker_id = message.get("speaker_id", "unknown")
-    display_name = speaker_id
-    if speaker_id in config.models:
-        display_name = config.models[speaker_id].name
-
-    phase = message.get("phase", "unknown")
-    content = message.get("content", "")
-
-    panel = Panel(
-        content,
-        title=f"[{speaker_style}]{display_name}[/{speaker_style}] ({position.upper()})",
-        border_style=speaker_style,
-        subtitle=f"{phase.title()}",
-    )
-
-    console.print(panel)
-    console.print()  # Add spacing
 
 
 def _display_judge_decision(decision: dict[str, Any], config: AppConfig) -> None:
@@ -628,6 +505,40 @@ def _display_judge_decision(decision: dict[str, Any], config: AppConfig) -> None
 def _display_error(error: Exception) -> None:
     """Display a formatted error message using Rich."""
     import traceback
+
+    if isinstance(error, ProviderRateLimitError):
+        provider = error.provider.capitalize()
+        lines: list[str] = [
+            f"[bold]{provider}[/bold] rejected the request with HTTP {error.status_code} (rate limited).",
+        ]
+
+        if error.model:
+            lines.append(f"[bold]Model:[/bold] {error.model}")
+
+        if error.detail:
+            lines.append("")
+            lines.append(error.detail)
+
+        if error.provider == "openrouter":
+            lines.append("")
+            lines.append(
+                "Check your OpenRouter balance or select a different model."
+            )
+            if error.is_free_tier_model:
+                lines.append(
+                    "Models ending with ':free' require sufficient balance despite being marked free; try a paid route or top up your credits."
+                )
+
+        panel = Panel.fit(
+            "\n".join(lines),
+            title="[yellow]🚦 Rate Limit[/yellow]",
+            border_style="yellow",
+            padding=(1, 2),
+        )
+        console.print("\n")
+        console.print(panel)
+        console.print()
+        return
 
     error_panel = Panel.fit(
         f"""[bold red]Exception Type:[/bold red] {type(error).__name__}

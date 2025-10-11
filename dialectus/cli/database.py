@@ -3,8 +3,9 @@
 import sqlite3
 import json
 import logging
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, Generator
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,23 @@ class DatabaseManager:
     def __init__(self, db_path: str | None = None):
         self.db_path = db_path or str(get_database_path())
         self._ensure_schema()
+
+    @contextmanager
+    def _get_connection(self, read_only: bool = False) -> Generator[sqlite3.Connection, None, None]:
+        """Context manager for database connections with automatic commit/rollback."""
+        conn = sqlite3.connect(self.db_path)
+        if read_only:
+            conn.row_factory = sqlite3.Row
+        try:
+            yield conn
+            if not read_only:
+                conn.commit()
+        except Exception:
+            if not read_only:
+                conn.rollback()
+            raise
+        finally:
+            conn.close()
 
     def _ensure_schema(self) -> None:
         """Create database schema if it doesn't exist."""
@@ -43,8 +61,7 @@ class DatabaseManager:
 
     def save_debate(self, transcript_data: dict[str, Any]) -> int:
         """Save debate transcript and messages. Returns debate ID."""
-        conn = sqlite3.connect(self.db_path)
-        try:
+        with self._get_connection() as conn:
             cursor = conn.cursor()
 
             # Extract metadata
@@ -106,12 +123,8 @@ class DatabaseManager:
                     ),
                 )
 
-            conn.commit()
             logger.info(f"Saved debate transcript with ID {debate_id}")
             return debate_id
-
-        finally:
-            conn.close()
 
     def save_judge_decision(
         self,
@@ -128,8 +141,7 @@ class DatabaseManager:
         cost_queried_at: str | None = None,
     ) -> int:
         """Save judge decision. Returns decision ID."""
-        conn = sqlite3.connect(self.db_path)
-        try:
+        with self._get_connection() as conn:
             cursor = conn.cursor()
 
             cursor.execute(
@@ -160,19 +172,14 @@ class DatabaseManager:
 
             if decision_id is None:
                 raise RuntimeError("Failed to determine judge decision ID after insert.")
-            conn.commit()
             logger.info(f"Saved judge decision with ID {decision_id}")
             return decision_id
-
-        finally:
-            conn.close()
 
     def save_criterion_scores(
         self, decision_id: int, criterion_data: list[dict[str, Any]]
     ) -> None:
         """Save criterion scores for a judge decision."""
-        conn = sqlite3.connect(self.db_path)
-        try:
+        with self._get_connection() as conn:
             cursor = conn.cursor()
 
             for score in criterion_data:
@@ -192,18 +199,13 @@ class DatabaseManager:
                     ),
                 )
 
-            conn.commit()
             logger.info(f"Saved {len(criterion_data)} criterion scores")
-
-        finally:
-            conn.close()
 
     def save_ensemble_summary(
         self, debate_id: int, ensemble_data: dict[str, Any]
     ) -> int:
         """Save ensemble summary. Returns summary ID."""
-        conn = sqlite3.connect(self.db_path)
-        try:
+        with self._get_connection() as conn:
             cursor = conn.cursor()
 
             cursor.execute(
@@ -232,20 +234,14 @@ class DatabaseManager:
 
             if summary_id is None:
                 raise RuntimeError("Failed to determine ensemble summary ID after insert.")
-            conn.commit()
             logger.info(f"Saved ensemble summary with ID {summary_id}")
             return summary_id
-
-        finally:
-            conn.close()
 
     def list_transcripts(
         self, limit: int = 20, offset: int = 0
     ) -> list[dict[str, Any]]:
         """List debate transcripts (metadata only)."""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        try:
+        with self._get_connection(read_only=True) as conn:
             cursor = conn.cursor()
 
             cursor.execute(
@@ -261,14 +257,9 @@ class DatabaseManager:
             rows = cursor.fetchall()
             return [dict(row) for row in rows]
 
-        finally:
-            conn.close()
-
     def load_transcript(self, debate_id: int) -> dict[str, Any] | None:
         """Load full debate transcript including messages."""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        try:
+        with self._get_connection(read_only=True) as conn:
             cursor = conn.cursor()
 
             # Get debate metadata
@@ -293,14 +284,9 @@ class DatabaseManager:
 
             return {"metadata": debate, "messages": messages}
 
-        finally:
-            conn.close()
-
     def load_judge_decision(self, debate_id: int) -> dict[str, Any] | None:
         """Load judge decision (single judge case)."""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        try:
+        with self._get_connection(read_only=True) as conn:
             cursor = conn.cursor()
 
             # Get decision
@@ -330,14 +316,9 @@ class DatabaseManager:
 
             return decision
 
-        finally:
-            conn.close()
-
     def load_judge_decisions(self, debate_id: int) -> list[dict[str, Any]]:
         """Load all judge decisions for a debate (ensemble case)."""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        try:
+        with self._get_connection(read_only=True) as conn:
             cursor = conn.cursor()
 
             # Get all decisions
@@ -360,14 +341,9 @@ class DatabaseManager:
 
             return decisions
 
-        finally:
-            conn.close()
-
     def load_ensemble_summary(self, debate_id: int) -> dict[str, Any] | None:
         """Load ensemble summary."""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        try:
+        with self._get_connection(read_only=True) as conn:
             cursor = conn.cursor()
 
             cursor.execute(
@@ -376,6 +352,3 @@ class DatabaseManager:
             row = cursor.fetchone()
 
             return dict(row) if row else None
-
-        finally:
-            conn.close()

@@ -1,19 +1,28 @@
 {
   "include": [
-    "."
+    "*.py"
+  ],
+  "exclude": [
+    "venv",
+    "deps",
+    "build",
+    "dist",
+    "*.egg-info"
   ],
   "extraPaths": [
-    "."
+    ".",
+    "./venv/Lib/site-packages"
   ],
   "pythonVersion": "3.13",
-  "typeCheckingMode": "standard",
+  "typeCheckingMode": "strict",
   "useLibraryCodeForTypes": true,
   "executionEnvironments": [
     {
       "root": ".",
       "pythonVersion": "3.13",
       "extraPaths": [
-        "."
+        ".",
+        "./venv/Lib/site-packages"
       ]
     }
   ]

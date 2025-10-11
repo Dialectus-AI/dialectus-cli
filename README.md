@@ -6,7 +6,7 @@ Command-line interface for the Dialectus AI debate system.
 
 The Dialectus CLI provides a rich, interactive command-line interface for managing AI debates. Built with Rich for beautiful terminal output and comprehensive debate management features.
 
-![CLI](https://github.com/user-attachments/assets/fc031506-feef-4cb1-9f30-e1eb513b06a6)
+<img src="https://github.com/user-attachments/assets/fc031506-feef-4cb1-9f30-e1eb513b06a6" width=50% height=50% alt="CLI">
 
 ## Features
 

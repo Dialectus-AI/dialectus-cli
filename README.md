@@ -69,10 +69,6 @@ The CLI uses a `debate_config.json` file for settings. You can generate this int
 python cli.py --configure
 ```
 
-## Development
-
-This repository was extracted from the original AI-Debate monolith to create a focused, installable CLI tool.
-
 ## Dependencies
 
 - `rich` - Beautiful terminal output and interactive prompts

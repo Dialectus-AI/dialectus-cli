@@ -9,15 +9,17 @@ from datetime import datetime
 from rich.console import Console
 from rich.panel import Panel
 
-from cli_config import AppConfig
+from dialectus.cli.config import AppConfig
 from models.manager import ModelManager
 from models.providers import ProviderRateLimitError
 from debate_engine import DebateEngine
+from debate_engine.models import DebateContext
 from formats import format_registry
 from judges.factory import create_judges
-from database import DatabaseManager
+from judges.base import BaseJudge, JudgeDecision
+from dialectus.cli.database import DatabaseManager
 
-from judges.base import BaseJudge
+from dialectus.cli.presentation import display_judge_decision
 
 logger = logging.getLogger(__name__)
 
@@ -184,7 +186,9 @@ class DebateRunner:
         self.console.print(panel)
         self.console.print()
 
-    async def _save_transcript(self, context, judge_result) -> int:
+    async def _save_transcript(
+        self, context: DebateContext, judge_result: JudgeDecision | dict[str, Any] | None
+    ) -> int:
         """Save debate transcript to database. Returns debate ID."""
         total_debate_time_ms = context.metadata.get("total_debate_time_ms", 0)
 
@@ -231,12 +235,14 @@ class DebateRunner:
         if judge_result:
             if isinstance(judge_result, dict) and judge_result.get("type") == "ensemble":
                 await self._save_ensemble_result(db_id, judge_result)
-            else:
+            elif isinstance(judge_result, JudgeDecision):
                 await self._save_individual_decision(db_id, judge_result)
 
         return db_id
 
-    async def _save_individual_decision(self, debate_id: int, judge_decision) -> int:
+    async def _save_individual_decision(
+        self, debate_id: int, judge_decision: JudgeDecision
+    ) -> int:
         """Save a single judge decision to the database."""
         logger.info(f"Saving individual judge decision for debate {debate_id}")
 
@@ -273,25 +279,25 @@ class DebateRunner:
         return decision_id
 
     async def _save_ensemble_result(
-        self, debate_id: int, ensemble_result: dict
+        self, debate_id: int, ensemble_result: dict[str, Any]
     ) -> None:
         """Save ensemble result - individual decisions + ensemble summary."""
-        decisions = ensemble_result["decisions"]
-        ensemble_summary = ensemble_result["ensemble_summary"]
+        decisions: list[JudgeDecision] = ensemble_result["decisions"]
+        ensemble_summary: dict[str, Any] = ensemble_result["ensemble_summary"]
 
         logger.info(
             f"Saving ensemble result with {len(decisions)} decisions for debate {debate_id}"
         )
 
         # Save each individual decision
-        decision_ids = []
+        decision_ids: list[int] = []
         for i, decision in enumerate(decisions):
             decision_id = await self._save_individual_decision(debate_id, decision)
             decision_ids.append(decision_id)
             logger.info(f"Saved decision {i+1}/{len(decisions)} with ID {decision_id}")
 
         # Save ensemble summary
-        ensemble_data = {
+        ensemble_data: dict[str, Any] = {
             "final_winner_id": ensemble_summary["final_winner_id"],
             "final_margin": ensemble_summary["final_margin"],
             "ensemble_method": ensemble_summary.get("ensemble_method", "majority"),
@@ -305,12 +311,11 @@ class DebateRunner:
         ensemble_id = self.db.save_ensemble_summary(debate_id, ensemble_data)
         logger.info(f"Saved ensemble summary {ensemble_id} for debate {debate_id}")
 
-    def _display_judge_results(self, db_id: int, judge_result) -> None:
+    def _display_judge_results(
+        self, db_id: int, judge_result: JudgeDecision | dict[str, Any] | None
+    ) -> None:
         """Load and display judge results from database."""
         try:
-            # Import display function from cli (we'll move it later if needed)
-            from cli import _display_judge_decision
-
             # Check if this is an ensemble result
             if isinstance(judge_result, dict) and judge_result.get("type") == "ensemble":
                 # Load ensemble summary
@@ -320,11 +325,11 @@ class DebateRunner:
                     individual_decisions = self.db.load_judge_decisions(db_id)
 
                     # Collect all criterion scores
-                    all_criterion_scores = []
+                    all_criterion_scores: list[dict[str, Any]] = []
                     for decision in individual_decisions:
                         all_criterion_scores.extend(decision["criterion_scores"])
 
-                    decision_dict = {
+                    decision_dict: dict[str, Any] = {
                         "winner_id": ensemble_summary["final_winner_id"],
                         "winner_margin": ensemble_summary["final_margin"],
                         "overall_feedback": ensemble_summary["summary_feedback"],
@@ -338,12 +343,12 @@ class DebateRunner:
                         },
                     }
 
-                    _display_judge_decision(decision_dict, self.config)
+                    display_judge_decision(self.console, self.config, decision_dict)
             else:
                 # Single judge case
                 judge_decision = self.db.load_judge_decision(db_id)
                 if judge_decision:
-                    _display_judge_decision(judge_decision, self.config)
+                    display_judge_decision(self.console, self.config, judge_decision)
 
         except Exception as e:
             logger.error(f"Failed to display judge results: {e}")

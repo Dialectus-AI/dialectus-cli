@@ -1,52 +1,19 @@
 # Dialectus CLI
 
-Command-line interface for the Dialectus AI debate system. This CLI imports the `dialectus-engine` wheel directly and runs debates locally.
+Command-line interface for the Dialectus AI debate system. Run AI debates locally with Ollama or cloud models via OpenRouter.
 
-## Quick Start
+## Installation
 
-### Linux/macOS/Git Bash
 ```bash
-# 1. Build and install the engine wheel
-./build-engine.sh
-
-# 2. Copy the example config
-cp debate_config.example.json debate_config.json
-
-# 3. Edit config with your models and API keys (if using OpenRouter)
-nano debate_config.json
-
-# 4. Run a debate
-python cli.py debate
+pip install dialectus-cli
 ```
 
-### Windows (PowerShell)
-```powershell
-# 1. Build and install the engine wheel
-.\build-engine.ps1
+### From Source
 
-# 2. Copy the example config
-Copy-Item debate_config.example.json debate_config.json
-
-# 3. Edit config with your models and API keys (if using OpenRouter)
-notepad debate_config.json
-
-# 4. Run a debate
-python cli.py debate
-```
-
-### Windows (CMD)
-```cmd
-REM 1. Build and install the engine wheel
-build-engine.bat
-
-REM 2. Copy the example config
-copy debate_config.example.json debate_config.json
-
-REM 3. Edit config with your models and API keys (if using OpenRouter)
-notepad debate_config.json
-
-REM 4. Run a debate
-python cli.py debate
+```bash
+git clone https://github.com/Dialectus-AI/dialectus-cli
+cd dialectus-cli
+pip install -e ".[dev]"
 ```
 
 ## Requirements
@@ -57,48 +24,30 @@ python cli.py debate
 
 ### Environment Variables
 
-**Linux/macOS:**
 ```bash
+# Linux/macOS
 export OPENROUTER_API_KEY="your-key-here"
-```
 
-**Windows (PowerShell):**
-```powershell
+# Windows PowerShell
 $env:OPENROUTER_API_KEY="your-key-here"
-```
 
-**Windows (CMD):**
-```cmd
+# Windows CMD
 set OPENROUTER_API_KEY=your-key-here
 ```
 
-## Installation
+## Quick Start
 
-### Linux/macOS/Git Bash
+After installation, the `dialectus` command is available:
+
 ```bash
-# Install dependencies
-pip install -r requirements.txt
+# Copy example config
+cp debate_config.example.json debate_config.json
 
-# Build and install engine wheel
-./build-engine.sh
-```
+# Edit with your preferred models and API keys
+nano debate_config.json  # or your favorite editor
 
-### Windows (PowerShell)
-```powershell
-# Install dependencies
-pip install -r requirements.txt
-
-# Build and install engine wheel
-.\build-engine.ps1
-```
-
-### Windows (CMD)
-```cmd
-REM Install dependencies
-pip install -r requirements.txt
-
-REM Build and install engine wheel
-build-engine.bat
+# Run a debate
+dialectus debate
 ```
 
 ## Configuration
@@ -110,25 +59,25 @@ Edit `debate_config.json` to configure:
 
 ## Commands
 
-All commands work identically across platforms (Linux/macOS/Windows):
+All commands work identically across platforms:
 
 ### Start a Debate
 ```bash
-python cli.py debate
-python cli.py debate --topic "Should AI be regulated?"
-python cli.py debate --format oxford
-python cli.py debate --interactive
+dialectus debate
+dialectus debate --topic "Should AI be regulated?"
+dialectus debate --format oxford
+dialectus debate --interactive
 ```
 
 ### List Available Models
 ```bash
-python cli.py list-models
+dialectus list-models
 ```
 
 ### View Saved Transcripts
 ```bash
-python cli.py transcripts
-python cli.py transcripts --limit 50
+dialectus transcripts
+dialectus transcripts --limit 50
 ```
 
 ## Database
@@ -149,28 +98,19 @@ CLI → DebateRunner → DebateEngine → Rich Console
 
 ## Development
 
-### Rebuilding the Engine
+### Contributing
 
-When the engine code changes:
-
-**Linux/macOS/Git Bash:**
 ```bash
-./build-engine.sh
-```
+# Clone and install in editable mode
+git clone https://github.com/Dialectus-AI/dialectus-cli
+cd dialectus-cli
+pip install -e ".[dev]"
 
-**Windows (PowerShell):**
-```powershell
-.\build-engine.ps1
-```
+# Type checking
+pyright dialectus/
 
-**Windows (CMD):**
-```cmd
-build-engine.bat
-```
-
-### Type Checking
-```bash
-pyright cli.py
+# Build package
+python -m build
 ```
 
 ## License

@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dialectus-cli"
+version = "0.1.0"
+description = "Command-line interface for the Dialectus AI debate system"
+readme = "README.md"
+requires-python = ">=3.13"
+license = "MIT"
+authors = [
+    {name = "Dialectus AI"}
+]
+keywords = ["ai", "debate", "cli", "artificial-intelligence", "argumentation"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Education",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Environment :: Console",
+]
+
+dependencies = [
+    "rich>=14.1.0",
+    "click>=8.2.1",
+    "pydantic>=2.11.0",
+    "dialectus-engine>=0.1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pip-tools>=7.0.0",
+    "pyright>=1.1.0",
+]
+
+[project.scripts]
+dialectus = "dialectus.cli:cli"
+
+[project.urls]
+Homepage = "https://github.com/Dialectus-AI/dialectus-cli"
+Repository = "https://github.com/Dialectus-AI/dialectus-cli"
+Issues = "https://github.com/Dialectus-AI/dialectus-cli/issues"
+
+[tool.setuptools]
+packages = ["dialectus"]
+
+[tool.pyright]
+include = ["dialectus"]
+exclude = ["setup.py", "venv", "deps", "build", "dist", "*.egg-info"]
+extraPaths = [".", "./venv/Lib/site-packages"]
+pythonVersion = "3.13"
+typeCheckingMode = "standard"
+useLibraryCodeForTypes = true

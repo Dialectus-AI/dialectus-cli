@@ -80,7 +80,7 @@ def display_judge_decision(
 
     overall_feedback = decision.get("overall_feedback")
     if overall_feedback:
-        console.print(f"\n[bold blue]Judge's Summary:[/bold blue]")
+        console.print("\n[bold blue]Judge's Summary:[/bold blue]")
         console.print(f"[italic]{overall_feedback}[/italic]")
 
     _display_detailed_scoring(
@@ -93,7 +93,7 @@ def display_judge_decision(
     ensemble_size = metadata.get("ensemble_size", 0)
 
     if ensemble_size > 1 and individual_decisions:
-        console.print(f"\n[bold blue]Individual Judge Decisions:[/bold blue]")
+        console.print("\n[bold blue]Individual Judge Decisions:[/bold blue]")
         for index, individual_decision in enumerate(individual_decisions, start=1):
             display_individual_judge_decision(
                 console, individual_decision, index, get_display_name
@@ -303,7 +303,7 @@ def _display_detailed_scoring(
     if not criterion_scores:
         return
 
-    console.print(f"\n[bold blue]Detailed Scoring:[/bold blue]")
+    console.print("\n[bold blue]Detailed Scoring:[/bold blue]")
 
     if _check_incomplete_scoring(criterion_scores):
         console.print(
@@ -348,7 +348,7 @@ def _display_reasoning(console: Console, reasoning: str | None) -> None:
     if not reasoning or _is_structured_data(reasoning):
         return
 
-    console.print(f"\n[bold blue]Judge's Reasoning:[/bold blue]")
+    console.print("\n[bold blue]Judge's Reasoning:[/bold blue]")
     reasoning_lines = reasoning.split("\n")
     for line in reasoning_lines:
         if len(line) > 100:

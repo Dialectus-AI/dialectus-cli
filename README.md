@@ -1,77 +1,118 @@
 # Dialectus CLI
 
-Command-line interface for the Dialectus AI debate system.
-
-## Overview
-
-The Dialectus CLI provides a rich, interactive command-line interface for managing AI debates. Built with Rich for beautiful terminal output and comprehensive debate management features.
-
-<img src="https://github.com/user-attachments/assets/fc031506-feef-4cb1-9f30-e1eb513b06a6" width=50% height=50% alt="CLI">
-
-## Features
-
-- **Interactive Debate Creation** - Rich prompts for setting up debates
-- **Real-time Progress Tracking** - Live progress bars and status updates  
-- **Comprehensive Output** - Detailed debate transcripts and judge results
-- **Model Management** - Easy configuration of AI models and providers
-- **Format Support** - Multiple debate formats (Oxford, Parliamentary, Socratic)
-- **Export Options** - Save transcripts in various formats
+Command-line interface for the Dialectus AI debate system. Run AI debates locally with Ollama or cloud models via OpenRouter.
 
 ## Installation
 
-### From PyPI (coming soon)
 ```bash
 pip install dialectus-cli
 ```
 
 ### From Source
+
 ```bash
-git clone https://github.com/psarno/dialectus-cli.git
+git clone https://github.com/Dialectus-AI/dialectus-cli
 cd dialectus-cli
-pip install -r requirements.txt
+pip install -e ".[dev]"
+```
+
+## Requirements
+
+- **Python 3.13+**
+- **Ollama** (if using local models): Running at `http://localhost:11434`
+- **OpenRouter API key** (if using cloud models): Set via environment variable
+
+### Environment Variables
+
+```bash
+# Linux/macOS
+export OPENROUTER_API_KEY="your-key-here"
+
+# Windows PowerShell
+$env:OPENROUTER_API_KEY="your-key-here"
+
+# Windows CMD
+set OPENROUTER_API_KEY=your-key-here
 ```
 
 ## Quick Start
 
-1. Run a debate with default settings:
-```bash
-python cli.py
-```
-
-2. Configure AI models:
-```bash
-python cli.py --configure
-```
-
-3. Use specific debate format:
-```bash
-python cli.py --format oxford --topic "Should AI be regulated?"
-```
-
-## Usage
+After installation, the `dialectus` command is available:
 
 ```bash
-python cli.py [OPTIONS]
+# Copy example config
+cp debate_config.example.json debate_config.json
 
-Options:
-  --topic TEXT        Debate topic
-  --format TEXT       Debate format (oxford, parliamentary, socratic)
-  --rounds INT        Number of debate rounds
-  --configure        Configure AI models and settings
-  --help             Show help and exit
+# Edit with your preferred models and API keys
+nano debate_config.json  # or your favorite editor
+
+# Run a debate
+dialectus debate
 ```
 
 ## Configuration
 
-The CLI uses a `debate_config.json` file for settings. You can generate this interactively:
+Edit `debate_config.json` to configure:
+- **Models**: Debate participants (Ollama or OpenRouter)
+- **Judging**: AI judge models and evaluation criteria
+- **System**: Ollama/OpenRouter settings
 
+## Commands
+
+All commands work identically across platforms:
+
+### Start a Debate
 ```bash
-python cli.py --configure
+dialectus debate
+dialectus debate --topic "Should AI be regulated?"
+dialectus debate --format oxford
+dialectus debate --interactive
 ```
 
-## Dependencies
+### List Available Models
+```bash
+dialectus list-models
+```
 
-- `rich` - Beautiful terminal output and interactive prompts
-- `click` - Command-line interface framework
-- `pydantic` - Data validation and settings management
-- `httpx` - HTTP client for API communication
+### View Saved Transcripts
+```bash
+dialectus transcripts
+dialectus transcripts --limit 50
+```
+
+## Database
+
+Transcripts are saved to SQLite database at `~/.dialectus/debates.db`
+
+## Architecture
+
+```
+CLI → DebateRunner → DebateEngine → Rich Console
+           ↓
+    SQLite Database
+```
+
+- **No API layer** - Imports engine directly
+- **Local-first** - Runs completely offline with Ollama
+- **SQLite storage** - Simple, portable database
+
+## Development
+
+### Contributing
+
+```bash
+# Clone and install in editable mode
+git clone https://github.com/Dialectus-AI/dialectus-cli
+cd dialectus-cli
+pip install -e ".[dev]"
+
+# Type checking
+pyright dialectus/
+
+# Build package
+python -m build
+```
+
+## License
+
+MIT (open source)

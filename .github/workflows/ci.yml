@@ -25,8 +25,7 @@ jobs:
         with:
           path: ~/.cache/pip
           key:
-            ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml',
-            '**/poetry.lock') }}
+            ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml', '**/poetry.lock') }}
           restore-keys: |
             ${{ runner.os }}-pip-
       - name: Install dependencies

@@ -39,7 +39,7 @@ jobs:
           ruff format . --check
       - name: Type check with pyright
         run: |
-          npm install -g @microsoft/pyright
+          npm install -g pyright
           pyright .  # Respects pyrightconfig.json
       - name: Run tests
         run: pytest

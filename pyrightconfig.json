@@ -9,21 +9,22 @@
     "dist",
     "*.egg-info"
   ],
+  "venvPath": ".",
+  "venv": "venv",
   "extraPaths": [
     ".",
-    "./venv/Lib/site-packages"
+    "./venv/Lib/site-packages",
+    "./venv/lib/python3.13/site-packages",
+    "./venv/lib/python3.14/site-packages"
   ],
   "pythonVersion": "3.13",
   "typeCheckingMode": "strict",
+  "reportMissingTypeStubs": "none",
   "useLibraryCodeForTypes": true,
   "executionEnvironments": [
     {
       "root": ".",
-      "pythonVersion": "3.13",
-      "extraPaths": [
-        ".",
-        "./venv/Lib/site-packages"
-      ]
+      "pythonVersion": "3.13"
     }
   ]
 }

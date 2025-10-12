@@ -122,8 +122,7 @@ class DebateRunner:
                     judging_succeeded = False
                     logger.error(f"Judge evaluation failed: {e}")
                     self.console.print(
-                        f"\n[red]Judge evaluation failed: {e}[/red]",
-                        style="bold"
+                        f"\n[red]Judge evaluation failed: {e}[/red]", style="bold"
                     )
 
             # Save transcript
@@ -147,8 +146,7 @@ class DebateRunner:
             except Exception as e:
                 logger.error(f"Failed to save transcript: {e}")
                 self.console.print(
-                    f"\n[red]Failed to save transcript: {e}[/red]",
-                    style="bold"
+                    f"\n[red]Failed to save transcript: {e}[/red]", style="bold"
                 )
                 raise
 
@@ -187,7 +185,9 @@ class DebateRunner:
         self.console.print()
 
     async def _save_transcript(
-        self, context: DebateContext, judge_result: JudgeDecision | dict[str, Any] | None
+        self,
+        context: DebateContext,
+        judge_result: JudgeDecision | dict[str, Any] | None,
     ) -> int:
         """Save debate transcript to database. Returns debate ID."""
         total_debate_time_ms = context.metadata.get("total_debate_time_ms", 0)
@@ -233,7 +233,10 @@ class DebateRunner:
 
         # Save judge results if provided
         if judge_result:
-            if isinstance(judge_result, dict) and judge_result.get("type") == "ensemble":
+            if (
+                isinstance(judge_result, dict)
+                and judge_result.get("type") == "ensemble"
+            ):
                 await self._save_ensemble_result(db_id, judge_result)
             elif isinstance(judge_result, JudgeDecision):
                 await self._save_individual_decision(db_id, judge_result)
@@ -294,7 +297,9 @@ class DebateRunner:
         for i, decision in enumerate(decisions):
             decision_id = await self._save_individual_decision(debate_id, decision)
             decision_ids.append(decision_id)
-            logger.info(f"Saved decision {i+1}/{len(decisions)} with ID {decision_id}")
+            logger.info(
+                f"Saved decision {i + 1}/{len(decisions)} with ID {decision_id}"
+            )
 
         # Save ensemble summary
         ensemble_data: dict[str, Any] = {
@@ -317,7 +322,10 @@ class DebateRunner:
         """Load and display judge results from database."""
         try:
             # Check if this is an ensemble result
-            if isinstance(judge_result, dict) and judge_result.get("type") == "ensemble":
+            if (
+                isinstance(judge_result, dict)
+                and judge_result.get("type") == "ensemble"
+            ):
                 # Load ensemble summary
                 ensemble_summary = self.db.load_ensemble_summary(db_id)
                 if ensemble_summary:
@@ -352,6 +360,4 @@ class DebateRunner:
 
         except Exception as e:
             logger.error(f"Failed to display judge results: {e}")
-            self.console.print(
-                f"\n[red]Failed to display judge results: {e}[/red]"
-            )
+            self.console.print(f"\n[red]Failed to display judge results: {e}[/red]")

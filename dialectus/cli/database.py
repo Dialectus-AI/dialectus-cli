@@ -25,7 +25,9 @@ class DatabaseManager:
         self._ensure_schema()
 
     @contextmanager
-    def _get_connection(self, read_only: bool = False) -> Generator[sqlite3.Connection, None, None]:
+    def _get_connection(
+        self, read_only: bool = False
+    ) -> Generator[sqlite3.Connection, None, None]:
         """Context manager for database connections with automatic commit/rollback."""
         conn = sqlite3.connect(self.db_path)
         if read_only:
@@ -94,7 +96,9 @@ class DatabaseManager:
             debate_id = cursor.lastrowid
 
             if debate_id is None:
-                raise RuntimeError("Failed to determine debate_id for saved transcript.")
+                raise RuntimeError(
+                    "Failed to determine debate_id for saved transcript."
+                )
 
             # Insert messages
             for message in transcript_data["messages"]:
@@ -171,7 +175,9 @@ class DatabaseManager:
             decision_id = cursor.lastrowid
 
             if decision_id is None:
-                raise RuntimeError("Failed to determine judge decision ID after insert.")
+                raise RuntimeError(
+                    "Failed to determine judge decision ID after insert."
+                )
             logger.info(f"Saved judge decision with ID {decision_id}")
             return decision_id
 
@@ -233,7 +239,9 @@ class DatabaseManager:
             summary_id = cursor.lastrowid
 
             if summary_id is None:
-                raise RuntimeError("Failed to determine ensemble summary ID after insert.")
+                raise RuntimeError(
+                    "Failed to determine ensemble summary ID after insert."
+                )
             logger.info(f"Saved ensemble summary with ID {summary_id}")
             return summary_id
 

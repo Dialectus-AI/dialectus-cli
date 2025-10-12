@@ -12,7 +12,7 @@ license = "MIT"
 authors = [
     {name = "Dialectus AI"}
 ]
-keywords = ["ai", "debate", "cli", "artificial-intelligence", "argumentation"]
+keywords = ["ai", "debate", "cli", "artificial-intelligence"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -34,6 +34,10 @@ dependencies = [
 dev = [
     "pip-tools>=7.0.0",
     "pyright>=1.1.0",
+    "ruff>=0.5.0",
+    "pytest>=7.0",
+    "twine",
+    "build"
 ]
 
 [project.scripts]

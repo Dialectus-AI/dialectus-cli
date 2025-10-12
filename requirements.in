@@ -1,4 +1,7 @@
-# Core CLI dependencies (no network libs - engine imported as wheel)
+# Core CLI dependencies
 rich>=13.0.0
 click>=8.0.0
 pydantic>=2.0.0
+
+# Once dialectus-engine is published to PyPI, uncomment:
+# dialectus-engine>=0.1.0

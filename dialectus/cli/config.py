@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 
 # Import config models directly from the engine
-from config.settings import (
+from dialectus.engine.config.settings import (
     AppConfig,
     ModelConfig,
     DebateConfig,

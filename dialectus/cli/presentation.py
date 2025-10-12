@@ -12,7 +12,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from dialectus.cli.config import AppConfig
-from models.providers import ProviderRateLimitError
+from dialectus.engine.models.providers import ProviderRateLimitError
 
 logger = logging.getLogger(__name__)
 

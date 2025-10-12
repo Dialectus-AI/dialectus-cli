@@ -10,13 +10,12 @@ from rich.console import Console
 from rich.panel import Panel
 
 from dialectus.cli.config import AppConfig
-from models.manager import ModelManager
-from models.providers import ProviderRateLimitError
-from debate_engine import DebateEngine
-from debate_engine.models import DebateContext
-from formats import format_registry
-from judges.factory import create_judges
-from judges.base import BaseJudge, JudgeDecision
+from dialectus.engine.models.manager import ModelManager
+from dialectus.engine.models.providers import ProviderRateLimitError
+from dialectus.engine.debate_engine import DebateContext, DebateEngine
+from dialectus.engine.formats import format_registry
+from dialectus.engine.judges.factory import create_judges
+from dialectus.engine.judges.base import BaseJudge, JudgeDecision
 from dialectus.cli.database import DatabaseManager
 
 from dialectus.cli.presentation import display_judge_decision

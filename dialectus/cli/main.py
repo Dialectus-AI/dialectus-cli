@@ -18,7 +18,7 @@ from rich.table import Table
 from dialectus.cli.config import AppConfig, get_default_config
 from dialectus.cli.runner import DebateRunner
 from dialectus.cli.database import DatabaseManager
-from models.manager import ModelManager
+from dialectus.engine.models.manager import ModelManager
 from dialectus.cli.presentation import display_debate_info, display_error
 
 

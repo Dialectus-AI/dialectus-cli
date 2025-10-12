@@ -90,7 +90,8 @@ class DebateRunner:
             if judge_models:
                 if judge_provider is None:
                     raise ValueError(
-                        "Judge provider must be specified when judge models are configured."
+                        "Judge provider must be specified when judge models are"
+                        " configured."
                     )
 
                 judges = cast(
@@ -127,7 +128,10 @@ class DebateRunner:
             # Save transcript
             try:
                 if judges_configured and not judging_succeeded:
-                    error_msg = "Debate configured with judges but judging failed - transcript NOT saved"
+                    error_msg = (
+                        "Debate configured with judges but judging failed - transcript"
+                        " NOT saved"
+                    )
                     logger.error(error_msg)
                     raise RuntimeError(error_msg)
 
@@ -175,7 +179,10 @@ class DebateRunner:
 
         panel = Panel(
             content,
-            title=f"[{speaker_style}]{display_name}[/{speaker_style}] ({position.upper()})",
+            title=(
+                f"[{speaker_style}]{display_name}[/{speaker_style}]"
+                f" ({position.upper()})"
+            ),
             border_style=speaker_style,
             subtitle=f"{phase.title()}",
         )
@@ -288,7 +295,8 @@ class DebateRunner:
         ensemble_summary: dict[str, Any] = ensemble_result["ensemble_summary"]
 
         logger.info(
-            f"Saving ensemble result with {len(decisions)} decisions for debate {debate_id}"
+            f"Saving ensemble result with {len(decisions)} decisions for debate"
+            f" {debate_id}"
         )
 
         # Save each individual decision

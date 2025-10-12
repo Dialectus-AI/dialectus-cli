@@ -172,7 +172,8 @@ def list_models(ctx: click.Context) -> None:
 
             if not models:
                 console.print(
-                    "[red]No models available. Make sure Ollama is running or OpenRouter is configured.[/red]"
+                    "[red]No models available. Make sure Ollama is running or"
+                    " OpenRouter is configured.[/red]"
                 )
                 return
 

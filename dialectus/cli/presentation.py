@@ -72,7 +72,8 @@ def display_judge_decision(
     if winner_margin > 0:
         victory_strength = _get_victory_strength(winner_margin)
         console.print(
-            f"[dim]Victory Margin: {winner_margin:.1f} points ({victory_strength})[/dim]"
+            f"[dim]Victory Margin: {winner_margin:.1f} points"
+            f" ({victory_strength})[/dim]"
         )
 
     judge_info = _format_judge_decision_info(decision)
@@ -110,7 +111,10 @@ def display_error(console: Console, error: Exception) -> None:
     if isinstance(error, ProviderRateLimitError):
         provider = error.provider.capitalize()
         lines: list[str] = [
-            f"[bold]{provider}[/bold] rejected the request with HTTP {error.status_code} (rate limited).",
+            (
+                f"[bold]{provider}[/bold] rejected the request with HTTP"
+                f" {error.status_code} (rate limited)."
+            ),
         ]
 
         if error.model:
@@ -121,13 +125,14 @@ def display_error(console: Console, error: Exception) -> None:
             lines.append(error.detail)
 
         if error.provider == "openrouter":
-            lines.extend(
-                [
-                    "",
-                    "Check your OpenRouter balance or select a different model.",
-                    "Models ending with ':free' require sufficient balance despite being marked free; try a paid route or top up your credits.",
-                ]
-            )
+            lines.extend([
+                "",
+                "Check your OpenRouter balance or select a different model.",
+                (
+                    "Models ending with ':free' require sufficient balance despite"
+                    " being marked free; try a paid route or top up your credits."
+                ),
+            ])
 
         panel = Panel.fit(
             "\n".join(lines),
@@ -192,7 +197,8 @@ def display_individual_judge_decision(
     reasoning = decision.get("reasoning")
     if reasoning and not _is_structured_data(reasoning):
         console.print(
-            f"[dim]Reasoning: {reasoning[:150]}{'...' if len(reasoning) > 150 else ''}[/dim]"
+            "[dim]Reasoning:"
+            f" {reasoning[:150]}{'...' if len(reasoning) > 150 else ''}[/dim]"
         )
 
 
@@ -223,8 +229,8 @@ def _format_judge_info(config: AppConfig) -> str:
         return judge_info
 
     judge_info = (
-        f"Ensemble: {judge_count} judges "
-        f"({', '.join(config.judging.judge_models)}) via {config.judging.judge_provider}"
+        f"Ensemble: {judge_count} judges ({', '.join(config.judging.judge_models)}) via"
+        f" {config.judging.judge_provider}"
     )
     logger.info(
         "Configured ensemble judges: %s via %s",

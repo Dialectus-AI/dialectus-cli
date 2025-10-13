@@ -51,3 +51,11 @@ Issues = "https://github.com/Dialectus-AI/dialectus-cli/issues"
 [tool.setuptools]
 packages = ["dialectus"]
 
+[tool.black]
+line-length = 88
+preview = true  # Enables unstable features
+
+[tool.ruff]
+line-length = 88
+preview = true  # Matches Black's unstable
+

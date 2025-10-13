@@ -51,6 +51,6 @@ jobs:
           exit "$status"
 
       - name: Build package
-        run: venv/bin/python -m build --sdist --wheel
+        run: python -m build --sdist --wheel
       - name: Check package integrity
-        run: venv/bin/python -m twine check dist/*
+        run: python -m twine check dist/*

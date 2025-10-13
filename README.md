@@ -117,6 +117,16 @@ pyright dialectus/
 python -m build
 ```
 
+### Dev Tooling
+
+CI runs Ruff for linting/formatting, Pyright for type checking, and Pytest for the test suite. Keep those tools (and the supporting build utilities) in sync by compiling `dev-requirements.in`:
+
+```bash
+pip install pip-tools
+pip-compile dev-requirements.in
+pip-sync dev-requirements.txt
+```
+
 ## License
 
 MIT (open source)

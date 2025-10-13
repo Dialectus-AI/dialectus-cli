@@ -25,7 +25,7 @@ jobs:
         with:
           path: ~/.cache/pip
           key:
-            ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml', '**/poetry.lock') }}
+            ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml','**/poetry.lock') }}
           restore-keys: |
             ${{ runner.os }}-pip-
       - name: Install dependencies
@@ -35,10 +35,10 @@ jobs:
           venv/bin/python -m pip install -e ".[dev]"
       - name: Lint with ruff
         run: |
-          venv/bin/python -m ruff check . --fix
-          venv/bin/python -m ruff format . --check
+          python -m ruff check . --fix
+          python -m ruff format . --check
       - name: Type check with pyright
-        run: venv/bin/pyright .  # Respects pyrightconfig.json
+        run: python -m pyright .
       - name: Run tests
         run: |
           status=0

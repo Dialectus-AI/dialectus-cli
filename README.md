@@ -117,6 +117,24 @@ pyright dialectus/
 python -m build
 ```
 
+### Running Tests
+
+```bash
+# Run all tests
+pytest
+
+# Run with verbose output
+pytest -v
+
+# Run specific test file
+pytest tests/test_database.py
+
+# Run with coverage
+pytest --cov=dialectus
+```
+
+All tests should pass with zero warnings.
+
 ### Dev Tooling
 
 CI runs Ruff for linting/formatting, Pyright for type checking, and Pytest for the test suite. Keep those tools (and the supporting build utilities) in sync by compiling `dev-requirements.in`:

@@ -22,6 +22,11 @@ from dialectus.cli.presentation import display_judge_decision
 
 logger = logging.getLogger(__name__)
 
+__all__ = [
+    "DebateRunner",
+    "_safe_isoformat",
+]
+
 
 def _safe_isoformat(value: Any) -> str | None:
     """Return an ISO formatted string for datetime-like values."""
@@ -42,6 +47,15 @@ class DebateRunner:
     def __init__(self, config: AppConfig, console: Console):
         self.config = config
         self.console = console
+
+        # Validate format exists (fail fast)
+        if self.config.debate.format not in format_registry.list_formats():
+            available = ", ".join(format_registry.list_formats())
+            raise ValueError(
+                f"Invalid debate format: {self.config.debate.format}. "
+                f"Available formats: {available}"
+            )
+
         self.model_manager = ModelManager(config.system)
         self.engine = DebateEngine(config, self.model_manager)
         self.db = DatabaseManager()
@@ -49,14 +63,6 @@ class DebateRunner:
     async def run_debate(self) -> None:
         """Run a full debate with judging and save to database."""
         try:
-            # Validate format exists
-            if self.config.debate.format not in format_registry.list_formats():
-                available = ", ".join(format_registry.list_formats())
-                raise ValueError(
-                    f"Invalid debate format: {self.config.debate.format}. "
-                    f"Available formats: {available}"
-                )
-
             # Initialize debate
             self.console.print("[cyan]Initializing debate...[/cyan]")
             context = await self.engine.initialize_debate()
@@ -72,7 +78,7 @@ class DebateRunner:
             # Message callback
             async def message_callback(event_type: str, data: dict[str, Any]):
                 if event_type == "message_complete":
-                    self._display_message(data)
+                    self.display_message(data)
 
             # Run debate with callbacks
             self.console.print("\n[bold blue]═══ DEBATE START ═══[/bold blue]\n")
@@ -135,12 +141,12 @@ class DebateRunner:
                     logger.error(error_msg)
                     raise RuntimeError(error_msg)
 
-                db_id = await self._save_transcript(context, judge_result)
+                db_id = await self.save_transcript(context, judge_result)
                 context.metadata["transcript_id"] = db_id
 
                 # Display judge results if judging succeeded
                 if judges_configured and judging_succeeded:
-                    self._display_judge_results(db_id, judge_result)
+                    self.display_judge_results(db_id, judge_result)
 
                 self.console.print(
                     f"\n[green]✓ Debate completed and saved (ID: {db_id})[/green]\n"
@@ -161,7 +167,7 @@ class DebateRunner:
             self.console.print(f"\n[red]Debate failed: {e}[/red]", style="bold")
             raise
 
-    def _display_message(self, message: dict[str, Any]) -> None:
+    def display_message(self, message: dict[str, Any]) -> None:
         """Display a debate message with Rich formatting."""
         style_map = {"pro": "green", "con": "red", "neutral": "blue"}
 
@@ -190,7 +196,7 @@ class DebateRunner:
         self.console.print(panel)
         self.console.print()
 
-    async def _save_transcript(
+    async def save_transcript(
         self,
         context: DebateContext,
         judge_result: JudgeDecision | dict[str, Any] | None,
@@ -243,13 +249,13 @@ class DebateRunner:
                 isinstance(judge_result, dict)
                 and judge_result.get("type") == "ensemble"
             ):
-                await self._save_ensemble_result(db_id, judge_result)
+                await self.save_ensemble_result(db_id, judge_result)
             elif isinstance(judge_result, JudgeDecision):
-                await self._save_individual_decision(db_id, judge_result)
+                await self.save_individual_decision(db_id, judge_result)
 
         return db_id
 
-    async def _save_individual_decision(
+    async def save_individual_decision(
         self, debate_id: int, judge_decision: JudgeDecision
     ) -> int:
         """Save a single judge decision to the database."""
@@ -287,7 +293,7 @@ class DebateRunner:
         logger.info(f"Saved judge decision {decision_id} for debate {debate_id}")
         return decision_id
 
-    async def _save_ensemble_result(
+    async def save_ensemble_result(
         self, debate_id: int, ensemble_result: dict[str, Any]
     ) -> None:
         """Save ensemble result - individual decisions + ensemble summary."""
@@ -302,7 +308,7 @@ class DebateRunner:
         # Save each individual decision
         decision_ids: list[int] = []
         for i, decision in enumerate(decisions):
-            decision_id = await self._save_individual_decision(debate_id, decision)
+            decision_id = await self.save_individual_decision(debate_id, decision)
             decision_ids.append(decision_id)
             logger.info(
                 f"Saved decision {i + 1}/{len(decisions)} with ID {decision_id}"
@@ -323,7 +329,7 @@ class DebateRunner:
         ensemble_id = self.db.save_ensemble_summary(debate_id, ensemble_data)
         logger.info(f"Saved ensemble summary {ensemble_id} for debate {debate_id}")
 
-    def _display_judge_results(
+    def display_judge_results(
         self, db_id: int, judge_result: JudgeDecision | dict[str, Any] | None
     ) -> None:
         """Load and display judge results from database."""

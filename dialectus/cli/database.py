@@ -43,6 +43,14 @@ class DatabaseManager:
         finally:
             conn.close()
 
+    @contextmanager
+    def get_connection(
+        self, read_only: bool = False
+    ) -> Generator[sqlite3.Connection, None, None]:
+        """Public API for getting database connections (for testing)."""
+        with self._get_connection(read_only=read_only) as conn:
+            yield conn
+
     def _ensure_schema(self) -> None:
         """Create database schema if it doesn't exist."""
         conn = sqlite3.connect(self.db_path)

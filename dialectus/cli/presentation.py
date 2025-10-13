@@ -432,4 +432,10 @@ __all__ = [
     "display_error",
     "display_individual_judge_decision",
     "display_judge_decision",
+    "_format_participants",
+    "_format_judge_info",
+    "_get_victory_strength",
+    "_is_structured_data",
+    "_check_incomplete_scoring",
+    "_build_side_label_mapping",
 ]

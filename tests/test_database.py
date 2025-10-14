@@ -1,7 +1,8 @@
 """Tests for database layer (SQLite operations and data persistence)."""
 
+import sqlite3
+import pytest
 from typing import Any
-
 
 from dialectus.cli.database import DatabaseManager
 
@@ -182,10 +183,18 @@ class TestDatabaseManager:
     ):
         db = DatabaseManager(db_path=temp_db)
 
-        try:
+        with pytest.raises(sqlite3.IntegrityError):
             db.save_judge_decision(debate_id=99999, **sample_judge_decision)
-        except Exception:
-            pass
+
+    def test_read_only_connection_disallows_writes(
+        self, temp_db: str, sample_debate_data: dict[str, Any]
+    ):
+        db = DatabaseManager(db_path=temp_db)
+        db.save_debate(sample_debate_data)
+
+        with db.get_connection(read_only=True) as conn:
+            with pytest.raises(sqlite3.OperationalError):
+                conn.execute("DELETE FROM debates")
 
     def test_message_storage_preserves_metadata(
         self, temp_db: str, sample_debate_data: dict[str, Any]

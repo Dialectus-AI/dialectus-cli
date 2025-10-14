@@ -258,6 +258,10 @@ class TestDebateRunner:
             assert debate_id == 42
             mock_db.save_debate.assert_called_once()
 
+            args, _ = mock_db.save_debate.call_args
+            transcript_payload = args[0]
+            assert transcript_payload["messages"][0]["timestamp"] is not None
+
     @pytest.mark.asyncio
     async def test_save_individual_decision(
         self,

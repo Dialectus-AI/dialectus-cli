@@ -229,7 +229,8 @@ class DebateRunner:
                     "phase": m.phase.value,
                     "round_number": m.round_number,
                     "content": m.content,
-                    "timestamp": _safe_isoformat(m.timestamp),
+                    "timestamp": _safe_isoformat(m.timestamp)
+                    or datetime.now().isoformat(),
                     "word_count": len(m.content.split()),
                     "metadata": m.metadata,
                     "cost": m.cost,

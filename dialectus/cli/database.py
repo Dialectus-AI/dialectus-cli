@@ -29,9 +29,14 @@ class DatabaseManager:
         self, read_only: bool = False
     ) -> Generator[sqlite3.Connection, None, None]:
         """Context manager for database connections with automatic commit/rollback."""
-        conn = sqlite3.connect(self.db_path)
         if read_only:
+            db_uri = f"file:{Path(self.db_path).resolve().as_posix()}?mode=ro"
+            conn = sqlite3.connect(db_uri, uri=True)
             conn.row_factory = sqlite3.Row
+        else:
+            conn = sqlite3.connect(self.db_path)
+
+        conn.execute("PRAGMA foreign_keys = ON")
         try:
             yield conn
             if not read_only:
@@ -54,6 +59,7 @@ class DatabaseManager:
     def _ensure_schema(self) -> None:
         """Create database schema if it doesn't exist."""
         conn = sqlite3.connect(self.db_path)
+        conn.execute("PRAGMA foreign_keys = ON")
         try:
             # Read and execute schema from schema.sql
             schema_path = Path(__file__).parent / "schema.sql"

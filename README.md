@@ -8,21 +8,49 @@ Command-line interface for the Dialectus AI debate system. Run AI debates locall
 
 ## Installation
 
+### From PyPI
+
+**Using uv (recommended):**
+```bash
+uv pip install dialectus-cli
+```
+
+**Using pip:**
 ```bash
 pip install dialectus-cli
 ```
 
 ### From Source
 
+**Using uv (recommended, faster):**
 ```bash
+# Clone the repository
 git clone https://github.com/Dialectus-AI/dialectus-cli
 cd dialectus-cli
-uv sync --all-extras
+
+# Install in development mode with all dev dependencies
+uv sync
+
+# Or install without dev dependencies
+uv pip install -e .
+```
+
+**Using pip:**
+```bash
+# Clone the repository
+git clone https://github.com/Dialectus-AI/dialectus-cli
+cd dialectus-cli
+
+# Install in development mode
+pip install -e .
+
+# Or install with dev dependencies
+pip install -e ".[dev]"
 ```
 
 ## Requirements
 
-- **Python 3.13+**
+- **Python 3.12+**
 - **uv** (recommended): Fast Python package manager - [Install uv](https://docs.astral.sh/uv/getting-started/installation/)
 - **Ollama** (if using local models): Running at `http://localhost:11434`
 - **OpenRouter API key** (if using cloud models): Set via environment variable
@@ -103,53 +131,101 @@ CLI → DebateRunner → DebateEngine → Rich Console
 
 ## Development
 
-### Contributing
+### Running Tests and Type Checking
 
+**Using uv (recommended):**
 ```bash
-# Clone and install in editable mode
-git clone https://github.com/Dialectus-AI/dialectus-cli
-cd dialectus-cli
-uv sync --all-extras
-
-# Type checking
-uv run pyright dialectus/
-
-# Build package
-uv run python -m build
-```
-
-### Running Tests
-
-```bash
-# Run all tests
+# Run tests
 uv run pytest
 
-# Run with verbose output
+# Run tests with verbose output
 uv run pytest -v
-
-# Run specific test file
-uv run pytest tests/test_database.py
 
 # Run with coverage
 uv run pytest --cov=dialectus
+
+# Type check with Pyright
+uv run pyright
+
+# Lint with ruff
+uv run ruff check .
+
+# Format with ruff
+uv run ruff format .
 ```
 
-All tests should pass with zero warnings.
-
-### Dev Tooling
-
-CI runs Ruff for linting/formatting, Pyright for type checking, and Pytest for the test suite. Dependencies are managed via `pyproject.toml` and automatically synced with uv:
-
+**Using pip:**
 ```bash
-# Install/update dependencies
-uv sync --all-extras
+# Ensure dev dependencies are installed
+pip install -e ".[dev]"
 
-# Add new dependency
-uv add package-name
+# Run tests
+pytest
 
-# Add new dev dependency
-uv add --dev package-name
+# Type check with Pyright
+pyright
+
+# Lint and format
+ruff check .
+ruff format .
 ```
+
+### Building Distribution
+
+**Using uv:**
+```bash
+# Build wheel and sdist
+uv build
+
+# Install locally from wheel
+uv pip install dist/dialectus_cli-*.whl
+```
+
+**Using pip:**
+```bash
+# Build wheel and sdist
+python -m build
+
+# Install locally
+pip install dist/dialectus_cli-*.whl
+```
+
+### Managing Dependencies
+
+**Using uv:**
+```bash
+# Add a new dependency
+# 1. Edit pyproject.toml [project.dependencies] section
+# 2. Update lock file and sync environment:
+uv lock && uv sync
+
+# Upgrade all dependencies (within version constraints)
+uv lock --upgrade
+
+# Upgrade specific package
+uv lock --upgrade-package rich
+
+# Add dev dependency
+# 1. Edit pyproject.toml [project.optional-dependencies.dev]
+# 2. Run:
+uv sync
+```
+
+**Using pip:**
+```bash
+# Add a new dependency
+# 1. Edit pyproject.toml dependencies
+# 2. Reinstall:
+pip install -e ".[dev]"
+```
+
+### Why uv?
+
+- **10-100x faster** than pip for installs and resolution
+- **Reproducible builds** via `uv.lock` (cross-platform, includes hashes)
+- **Python 3.14 ready** - Takes advantage of free-threading for even better performance
+- **Single source of truth** - Dependencies in `pyproject.toml`, lock file auto-generated
+- **Compatible** - `pip` still works perfectly with `pyproject.toml`
 
 ## License
 

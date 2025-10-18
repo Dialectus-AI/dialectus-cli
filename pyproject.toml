@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dialectus-cli"
-version = "0.1.0"
+version = "0.1.1"
 description = "Command-line interface for the Dialectus AI debate system"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -27,12 +27,11 @@ dependencies = [
     "rich>=14.1.0",
     "click>=8.2.1",
     "pydantic>=2.11.0",
-    "dialectus-engine>=0.1.2",
+    "dialectus-engine>=0.2.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pip-tools>=7.0.0",
     "pyright>=1.1.406",
     "ruff>=0.5.0",
     "pytest>=7.0",

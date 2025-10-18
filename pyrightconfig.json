@@ -1,30 +1,34 @@
 {
   "include": [
-    "*.py"
+    "dialectus"
   ],
   "exclude": [
     "venv",
+    ".venv",
     "deps",
     "build",
     "dist",
-    "*.egg-info"
+    "*.egg-info",
+    ".pytest_cache",
+    ".ruff_cache"
   ],
   "venvPath": ".",
   "venv": "venv",
   "extraPaths": [
     ".",
     "./venv/Lib/site-packages",
+    "./venv/lib/python3.12/site-packages",
     "./venv/lib/python3.13/site-packages",
     "./venv/lib/python3.14/site-packages"
   ],
-  "pythonVersion": "3.13",
+  "pythonVersion": "3.12",
   "typeCheckingMode": "strict",
   "reportMissingTypeStubs": "none",
   "useLibraryCodeForTypes": true,
   "executionEnvironments": [
     {
       "root": ".",
-      "pythonVersion": "3.13"
+      "pythonVersion": "3.12"
     }
   ]
 }

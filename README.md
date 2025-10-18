@@ -17,12 +17,13 @@ pip install dialectus-cli
 ```bash
 git clone https://github.com/Dialectus-AI/dialectus-cli
 cd dialectus-cli
-pip install -e ".[dev]"
+uv sync --all-extras
 ```
 
 ## Requirements
 
 - **Python 3.13+**
+- **uv** (recommended): Fast Python package manager - [Install uv](https://docs.astral.sh/uv/getting-started/installation/)
 - **Ollama** (if using local models): Running at `http://localhost:11434`
 - **OpenRouter API key** (if using cloud models): Set via environment variable
 
@@ -67,21 +68,21 @@ All commands work identically across platforms:
 
 ### Start a Debate
 ```bash
-dialectus debate
-dialectus debate --topic "Should AI be regulated?"
-dialectus debate --format oxford
-dialectus debate --interactive
+uv run dialectus debate
+uv run dialectus debate --topic "Should AI be regulated?"
+uv run dialectus debate --format oxford
+uv run dialectus debate --interactive
 ```
 
 ### List Available Models
 ```bash
-dialectus list-models
+uv run dialectus list-models
 ```
 
 ### View Saved Transcripts
 ```bash
-dialectus transcripts
-dialectus transcripts --limit 50
+uv run dialectus transcripts
+uv run dialectus transcripts --limit 50
 ```
 
 ## Database
@@ -108,41 +109,46 @@ CLI → DebateRunner → DebateEngine → Rich Console
 # Clone and install in editable mode
 git clone https://github.com/Dialectus-AI/dialectus-cli
 cd dialectus-cli
-pip install -e ".[dev]"
+uv sync --all-extras
 
 # Type checking
-pyright dialectus/
+uv run pyright dialectus/
 
 # Build package
-python -m build
+uv run python -m build
 ```
 
 ### Running Tests
 
 ```bash
 # Run all tests
-pytest
+uv run pytest
 
 # Run with verbose output
-pytest -v
+uv run pytest -v
 
 # Run specific test file
-pytest tests/test_database.py
+uv run pytest tests/test_database.py
 
 # Run with coverage
-pytest --cov=dialectus
+uv run pytest --cov=dialectus
 ```
 
 All tests should pass with zero warnings.
 
 ### Dev Tooling
 
-CI runs Ruff for linting/formatting, Pyright for type checking, and Pytest for the test suite. Keep those tools (and the supporting build utilities) in sync by compiling `dev-requirements.in`:
+CI runs Ruff for linting/formatting, Pyright for type checking, and Pytest for the test suite. Dependencies are managed via `pyproject.toml` and automatically synced with uv:
 
 ```bash
-pip install pip-tools
-pip-compile dev-requirements.in
-pip-sync dev-requirements.txt
+# Install/update dependencies
+uv sync --all-extras
+
+# Add new dependency
+uv add package-name
+
+# Add new dev dependency
+uv add --dev package-name
 ```
 
 ## License

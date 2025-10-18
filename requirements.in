@@ -1,6 +1,0 @@
-# Core CLI dependencies
-rich>=13.0.0
-click>=8.0.0
-pydantic>=2.0.0
-
-dialectus-engine>=0.1.2

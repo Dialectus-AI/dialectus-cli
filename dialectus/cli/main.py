@@ -3,8 +3,17 @@
 import asyncio
 import logging
 import os
+import sys
 from pathlib import Path
 from typing import Mapping, Protocol, cast
+
+# Allow running this module either as ``python -m dialectus.cli`` or
+# ``python dialectus/cli/main.py`` by ensuring the project root is on sys.path.
+if __package__ in {None, ""}:
+    project_root = Path(__file__).resolve().parents[2]
+    if str(project_root) not in sys.path:
+        sys.path.insert(0, str(project_root))
+    __package__ = "dialectus.cli"
 
 # Ensure UTF-8 encoding for cross-platform compatibility (Windows console, Git Bash, etc.)
 os.environ["PYTHONIOENCODING"] = "utf-8"

@@ -6,9 +6,12 @@ __pycache__/
 .Python
 env/
 venv/
+.venv/
 ENV/
 env.bak/
 venv.bak/
+.ruff_cache/
+.pyright_cache/
 
 # Distribution / packaging
 .Python

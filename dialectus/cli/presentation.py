@@ -14,6 +14,8 @@ from rich.table import Table
 from dialectus.cli.config import AppConfig
 from dialectus.engine.models.providers import ProviderRateLimitError
 
+from textwrap import dedent
+
 logger = logging.getLogger(__name__)
 
 
@@ -21,16 +23,16 @@ def display_debate_info(console: Console, config: AppConfig) -> None:
     """Render the core debate configuration details."""
     judge_info = _format_judge_info(config)
 
-    info_panel = Panel.fit(
+    info_panel = Panel.fit(dedent(
         f"""[bold]Topic:[/bold] {config.debate.topic}
-[bold]Format:[/bold] {config.debate.format.title()}
-[bold]Time per turn:[/bold] {config.debate.time_per_turn}s
-[bold]Word limit:[/bold] {config.debate.word_limit}
+            [bold]Format:[/bold] {config.debate.format.title()}
+            [bold]Time per turn:[/bold] {config.debate.time_per_turn}s
+            [bold]Word limit:[/bold] {config.debate.word_limit}
 
-[bold]Participants:[/bold]
-{_format_participants(config)}
+            [bold]Participants:[/bold]
+            {_format_participants(config)}
 
-[bold]Judging:[/bold] {judge_info}""",
+            [bold]Judging:[/bold] {judge_info}"""),
         title="Debate Setup",
         border_style="blue",
     )
@@ -146,16 +148,15 @@ def display_error(console: Console, error: Exception) -> None:
         return
 
     error_panel = Panel.fit(
-        f"""[bold red]Exception Type:[/bold red] {type(error).__name__}
-
-[bold red]Message:[/bold red] {str(error)}
-
-[bold red]Call Stack:[/bold red]
-{traceback.format_exc()}""",
+        dedent(f"""[bold red]Exception Type:[/bold red] {type(error).__name__}
+            [bold red]Message:[/bold red] {str(error)}
+            [bold red]Call Stack:[/bold red]
+            {traceback.format_exc()}"""),
         title="[red]⚠️  Debate Failed[/red]",
         border_style="red",
         padding=(1, 2),
     )
+    
     console.print("\n")
     console.print(error_panel)
     console.print()

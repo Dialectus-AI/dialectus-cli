@@ -23,8 +23,9 @@ def display_debate_info(console: Console, config: AppConfig) -> None:
     """Render the core debate configuration details."""
     judge_info = _format_judge_info(config)
 
-    info_panel = Panel.fit(dedent(
-        f"""[bold]Topic:[/bold] {config.debate.topic}
+    info_panel = Panel.fit(
+        dedent(
+            f"""[bold]Topic:[/bold] {config.debate.topic}
             [bold]Format:[/bold] {config.debate.format.title()}
             [bold]Time per turn:[/bold] {config.debate.time_per_turn}s
             [bold]Word limit:[/bold] {config.debate.word_limit}
@@ -32,7 +33,8 @@ def display_debate_info(console: Console, config: AppConfig) -> None:
             [bold]Participants:[/bold]
             {_format_participants(config)}
 
-            [bold]Judging:[/bold] {judge_info}"""),
+            [bold]Judging:[/bold] {judge_info}"""
+        ),
         title="Debate Setup",
         border_style="blue",
     )
@@ -156,7 +158,7 @@ def display_error(console: Console, error: Exception) -> None:
         border_style="red",
         padding=(1, 2),
     )
-    
+
     console.print("\n")
     console.print(error_panel)
     console.print()

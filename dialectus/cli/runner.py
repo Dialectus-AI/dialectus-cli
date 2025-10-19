@@ -14,6 +14,13 @@ from dialectus.cli.config import AppConfig
 from dialectus.engine.models.manager import ModelManager
 from dialectus.engine.models.providers import ProviderRateLimitError
 from dialectus.engine.debate_engine import DebateContext, DebateEngine
+from dialectus.engine.debate_engine.types import (
+    MessageEventType,
+    PhaseEventType,
+    PhaseStartedEventData,
+    MessageStartEventData,
+    MessageCompleteEventData,
+)
 from dialectus.engine.formats import format_registry
 from dialectus.engine.judges.factory import create_judges
 from dialectus.engine.judges.base import BaseJudge, JudgeDecision
@@ -69,17 +76,23 @@ class DebateRunner:
             context = await self.engine.initialize_debate()
 
             # Phase callback
-            async def phase_callback(event_type: str, data: dict[str, Any]):
-                if event_type == "phase_started":
+            async def phase_callback(
+                event: PhaseEventType, data: PhaseStartedEventData
+            ):
+                if event == PhaseEventType.PHASE_STARTED:
                     phase_name = data.get("phase", "unknown").upper()
                     self.console.print(
                         f"\n[bold magenta]═══ {phase_name} ═══[/bold magenta]\n"
                     )
 
             # Message callback
-            async def message_callback(event_type: str, data: dict[str, Any]):
-                if event_type == "message_complete":
-                    self.display_message(data)
+            async def message_callback(
+                event: MessageEventType,
+                data: MessageStartEventData | MessageCompleteEventData,
+            ):
+                if event == MessageEventType.MESSAGE_COMPLETE:
+                    # TypedDict is compatible with dict[str, Any] at runtime
+                    self.display_message(dict(data))
 
             # Display Dialectus logo
             self.console.print(dedent(r"""

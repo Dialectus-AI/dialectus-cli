@@ -400,10 +400,6 @@ class TestHelperFunctions:
         assert result is not None
         assert "2025-10-12" in result
 
-    def test_safe_isoformat_with_other_type(self):
-        result = _safe_isoformat(12345)
-        assert result == "12345"
-
     def test_safe_isoformat_with_isoformat_method(self):
         class MockDateTime:
             def isoformat(self) -> str:

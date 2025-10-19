@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from textwrap import dedent
-from typing import Any, cast
+from typing import Any, Protocol, cast
 from datetime import datetime
 
 from rich.console import Console
@@ -36,17 +36,26 @@ __all__ = [
 ]
 
 
-def _safe_isoformat(value: Any) -> str | None:
-    """Return an ISO formatted string for datetime-like values."""
+class _HasIsoformat(Protocol):
+    """Protocol for objects with isoformat method (datetime, date, time)."""
+
+    def isoformat(self) -> str: ...
+
+
+def _safe_isoformat(value: str | _HasIsoformat | None) -> str | None:
+    """Return an ISO formatted string for datetime-like values.
+
+    Handles:
+    - None -> None
+    - str -> str (pass through)
+    - datetime/date/time -> call .isoformat()
+    """
     if value is None:
         return None
     if isinstance(value, str):
         return value
-    iso_callable = getattr(value, "isoformat", None)
-    if callable(iso_callable):
-        iso_value = iso_callable()
-        return iso_value if isinstance(iso_value, str) else str(iso_value)
-    return str(value)
+    # Type-safe: value must have isoformat() method
+    return value.isoformat()
 
 
 class DebateRunner:
@@ -301,9 +310,7 @@ class DebateRunner:
             generation_time_ms=judge_decision.generation_time_ms,
             cost=judge_decision.cost,
             generation_id=judge_decision.generation_id,
-            cost_queried_at=_safe_isoformat(
-                getattr(judge_decision, "cost_queried_at", None)
-            ),
+            cost_queried_at=_safe_isoformat(judge_decision.cost_queried_at),
         )
 
         # Save criterion scores

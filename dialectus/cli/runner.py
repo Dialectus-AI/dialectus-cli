@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from textwrap import dedent
 from typing import Any, cast
 from datetime import datetime
 
@@ -81,14 +82,14 @@ class DebateRunner:
                     self.display_message(data)
 
             # Display Dialectus logo
-            self.console.print("""
-     _____  _       _           _
-    |  __ \\(_)     | |         | |
-    | |  | |_  __ _| | ___  ___| |_ _   _ ___
-    | |  | | |/ _` | |/ _ \\/ __| __| | | / __|
-    | |__| | | (_| | |  __/ (__| |_| |_| \\__ \\
-    |_____/|_|\\__,_|_|\\___|\\___|\\__|\\__,_|___/
-""", style="cyan", highlight=False)
+            self.console.print(dedent(r"""
+                  _____  _       _           _
+                 |  __ \(_)     | |         | |
+                 | |  | |_  __ _| | ___  ___| |_ _   _ ___
+                 | |  | | |/ _` | |/ _ \/ __| __| | | / __|
+                 | |__| | | (_| | |  __/ (__| |_| |_| \__ \
+                 |_____/|_|\__,_|_|\___|\___|\__|\__,_|___/
+                """), style="cyan", highlight=False)
 
             # Run debate with callbacks
             self.console.print("[bold blue]═══ DEBATE START ═══[/bold blue]\n")

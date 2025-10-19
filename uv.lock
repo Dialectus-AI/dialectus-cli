@@ -213,12 +213,11 @@ wheels = [
 
 [[package]]
 name = "dialectus-cli"
-version = "0.1.1"
+version = "0.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
-    { name = "dialectus-engine", version = "0.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
-    { name = "dialectus-engine", version = "0.2.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.13'" },
+    { name = "dialectus-engine" },
     { name = "pydantic" },
     { name = "rich" },
 ]
@@ -237,7 +236,7 @@ dev = [
 requires-dist = [
     { name = "build", marker = "extra == 'dev'" },
     { name = "click", specifier = ">=8.2.1" },
-    { name = "dialectus-engine", specifier = ">=0.2.0" },
+    { name = "dialectus-engine", specifier = ">=0.3.0" },
     { name = "pydantic", specifier = ">=2.11.0" },
     { name = "pyright", marker = "extra == 'dev'", specifier = ">=1.1.406" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
@@ -250,36 +249,16 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "dialectus-engine"
-version = "0.2.0"
+version = "0.3.0"
 source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.13'",
-]
 dependencies = [
-    { name = "httpx", marker = "python_full_version >= '3.13'" },
-    { name = "openai", marker = "python_full_version >= '3.13'" },
-    { name = "pydantic", marker = "python_full_version >= '3.13'" },
+    { name = "httpx" },
+    { name = "openai" },
+    { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/39/f4/d786e84143b376fe7c3a508071c126d807bca02c56ef2cad9bad3675f85f/dialectus_engine-0.2.0.tar.gz", hash = "sha256:6bb83a444a92bc70ba0098352ba888bcf0b09cf8b30a22d2c322263fab28598a", size = 85871, upload-time = "2025-10-17T20:25:30.17Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e4/60/8dd0fc0207f0133753e157739196aba4414b299729b53666280d585bf661/dialectus_engine-0.3.0.tar.gz", hash = "sha256:9948b89a1a3b21afc53099600bc06dc2ea90f96787053911997ede2d4b0c34ba", size = 87433, upload-time = "2025-10-19T14:03:11.894Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/70/78/bdf47a43e5eaff7e14511c4a3d6ec507a3fae7e8abb19663c0e625e04acc/dialectus_engine-0.2.0-py3-none-any.whl", hash = "sha256:8cac45666c56e555a01ece81287b07d21ace3e033fdbffdc7f03b1a95aa8a42f", size = 96368, upload-time = "2025-10-17T20:25:28.735Z" },
-]
-
-[[package]]
-name = "dialectus-engine"
-version = "0.2.2"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version < '3.13'",
-]
-dependencies = [
-    { name = "httpx", marker = "python_full_version < '3.13'" },
-    { name = "openai", marker = "python_full_version < '3.13'" },
-    { name = "pydantic", marker = "python_full_version < '3.13'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/cc/93/b9298c0f7624a6f94e173e8e12f0441daacee7e950c0658d590b4b421797/dialectus_engine-0.2.2.tar.gz", hash = "sha256:712abc0f3eb70af4ba23274a8033148f7ac9b07276cf6ecc43a692fdffae8696", size = 85917, upload-time = "2025-10-18T17:16:38.127Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/f7/54/2fb38df657f5db124ed4f260fc3c5febb6209d4cfd86131126abad0859d5/dialectus_engine-0.2.2-py3-none-any.whl", hash = "sha256:95f70ad6ab37e15f6940f2a138beb4c04e80c938a4b8748ae28f3649166c1912", size = 96375, upload-time = "2025-10-18T17:16:36.68Z" },
+    { url = "https://files.pythonhosted.org/packages/ca/9e/fe677e58c58a4d2062278bfbda538683878a324e1f8dcc69af7239b771a0/dialectus_engine-0.3.0-py3-none-any.whl", hash = "sha256:e65d6e89c2ed79c478d7267da2c4b53efd0961eb0645387fedba6be128038998", size = 97357, upload-time = "2025-10-19T14:03:10.66Z" },
 ]
 
 [[package]]

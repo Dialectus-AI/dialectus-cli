@@ -147,6 +147,23 @@ class _JudgeDecisionWithScoresBase(JudgeDecisionRow):
 JudgeDecisionWithScores = _JudgeDecisionWithScoresBase
 
 
+class EnsembleSummaryData(TypedDict):
+    """Data structure for saving ensemble summary to database.
+
+    This is the input to save_ensemble_summary(), containing the fields
+    needed to populate the ensemble_summary table.
+    """
+
+    final_winner_id: str
+    final_margin: float
+    ensemble_method: str
+    num_judges: int
+    consensus_level: float | None
+    summary_reasoning: str | None
+    summary_feedback: str | None
+    participating_judge_decision_ids: str  # CSV string of decision IDs
+
+
 class TranscriptData(TypedDict):
     """Full transcript with metadata and messages."""
 

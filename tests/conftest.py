@@ -6,6 +6,13 @@ from typing import Any, Generator
 
 import pytest
 
+from dialectus.cli.db_types import (
+    DebateMetadata,
+    DebateTranscriptData,
+    MessageData,
+    ParticipantInfo,
+)
+
 
 @pytest.fixture
 def temp_db() -> Generator[str, None, None]:
@@ -17,52 +24,52 @@ def temp_db() -> Generator[str, None, None]:
 
 
 @pytest.fixture
-def sample_debate_data() -> dict[str, Any]:
+def sample_debate_data() -> DebateTranscriptData:
     """Provide sample debate transcript data."""
-    return {
-        "metadata": {
-            "topic": "Should AI be regulated?",
-            "format": "oxford",
-            "participants": {
-                "model_a": {"name": "qwen2.5:7b", "personality": "analytical"},
-                "model_b": {"name": "llama3.2:3b", "personality": "passionate"},
+    return DebateTranscriptData(
+        metadata=DebateMetadata(
+            topic="Should AI be regulated?",
+            format="oxford",
+            participants={
+                "model_a": ParticipantInfo(name="qwen2.5:7b", personality="analytical"),
+                "model_b": ParticipantInfo(name="llama3.2:3b", personality="passionate"),
             },
-            "final_phase": "closing",
-            "total_rounds": 3,
-            "saved_at": "2025-10-12T10:30:00",
-            "message_count": 6,
-            "word_count": 1200,
-            "total_debate_time_ms": 45000,
-        },
-        "messages": [
-            {
-                "speaker_id": "model_a",
-                "position": "pro",
-                "phase": "opening",
-                "round_number": 1,
-                "content": "AI regulation is essential for safety.",
-                "timestamp": "2025-10-12T10:30:00",
-                "word_count": 6,
-                "metadata": {},
-                "cost": 0.001,
-                "generation_id": "gen_123",
-                "cost_queried_at": "2025-10-12T10:30:05",
-            },
-            {
-                "speaker_id": "model_b",
-                "position": "con",
-                "phase": "opening",
-                "round_number": 1,
-                "content": "AI regulation stifles innovation.",
-                "timestamp": "2025-10-12T10:30:15",
-                "word_count": 4,
-                "metadata": {},
-                "cost": 0.001,
-                "generation_id": "gen_124",
-                "cost_queried_at": "2025-10-12T10:30:20",
-            },
+            final_phase="closing",
+            total_rounds=3,
+            saved_at="2025-10-12T10:30:00",
+            message_count=6,
+            word_count=1200,
+            total_debate_time_ms=45000,
+        ),
+        messages=[
+            MessageData(
+                speaker_id="model_a",
+                position="pro",
+                phase="opening",
+                round_number=1,
+                content="AI regulation is essential for safety.",
+                timestamp="2025-10-12T10:30:00",
+                word_count=6,
+                metadata={},
+                cost=0.001,
+                generation_id="gen_123",
+                cost_queried_at="2025-10-12T10:30:05",
+            ),
+            MessageData(
+                speaker_id="model_b",
+                position="con",
+                phase="opening",
+                round_number=1,
+                content="AI regulation stifles innovation.",
+                timestamp="2025-10-12T10:30:15",
+                word_count=4,
+                metadata={},
+                cost=0.001,
+                generation_id="gen_124",
+                cost_queried_at="2025-10-12T10:30:20",
+            ),
         ],
-    }
+    )
 
 
 @pytest.fixture

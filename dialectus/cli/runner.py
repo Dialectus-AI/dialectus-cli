@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from textwrap import dedent
-from typing import Any, Protocol, cast
+from typing import Any, Protocol, TypedDict, cast
 from datetime import datetime
 
 from rich.console import Console
@@ -24,6 +24,7 @@ from dialectus.engine.debate_engine.types import (
 from dialectus.engine.formats import format_registry
 from dialectus.engine.judges.factory import create_judges
 from dialectus.engine.judges.base import BaseJudge, JudgeDecision
+from dialectus.engine.judges.ensemble_utils import EnsembleResult
 from dialectus.cli.database import DatabaseManager
 from dialectus.cli.db_types import (
     CriterionScoreRow,
@@ -42,8 +43,22 @@ from dialectus.cli.presentation import display_judge_decision
 
 logger = logging.getLogger(__name__)
 
+
+class EnsembleResultData(TypedDict):
+    """Structure returned by judge_debate_with_judges() for ensemble judging.
+
+    This is what the engine returns when multiple judges evaluate a debate.
+    Contains both individual judge decisions and the aggregated ensemble result.
+    """
+
+    type: str  # Always "ensemble" for multi-judge results
+    decisions: list[JudgeDecision]  # Individual decisions from each judge
+    ensemble_summary: EnsembleResult  # Aggregated ensemble result
+
+
 __all__ = [
     "DebateRunner",
+    "EnsembleResultData",
     "_safe_isoformat",
 ]
 
@@ -311,7 +326,9 @@ class DebateRunner:
                 isinstance(judge_result, dict)
                 and judge_result.get("type") == "ensemble"
             ):
-                await self.save_ensemble_result(db_id, judge_result)
+                # Type narrowing: we've verified it's a dict with "type" == "ensemble"
+                ensemble_data = cast(EnsembleResultData, judge_result)
+                await self.save_ensemble_result(db_id, ensemble_data)
             elif isinstance(judge_result, JudgeDecision):
                 await self.save_individual_decision(db_id, judge_result)
 
@@ -354,11 +371,11 @@ class DebateRunner:
         return decision_id
 
     async def save_ensemble_result(
-        self, debate_id: int, ensemble_result: dict[str, Any]
+        self, debate_id: int, ensemble_result: EnsembleResultData
     ) -> None:
         """Save ensemble result - individual decisions + ensemble summary."""
         decisions: list[JudgeDecision] = ensemble_result["decisions"]
-        ensemble_summary: dict[str, Any] = ensemble_result["ensemble_summary"]
+        ensemble_summary: EnsembleResult = ensemble_result["ensemble_summary"]
 
         logger.info(
             f"Saving ensemble result with {len(decisions)} decisions for debate"
@@ -378,11 +395,11 @@ class DebateRunner:
         ensemble_data = EnsembleSummaryData(
             final_winner_id=ensemble_summary["final_winner_id"],
             final_margin=ensemble_summary["final_margin"],
-            ensemble_method=ensemble_summary.get("ensemble_method", "majority"),
+            ensemble_method=ensemble_summary["ensemble_method"],
             num_judges=ensemble_summary["num_judges"],
-            consensus_level=ensemble_summary.get("consensus_level"),
-            summary_reasoning=ensemble_summary.get("summary_reasoning"),
-            summary_feedback=ensemble_summary.get("summary_feedback"),
+            consensus_level=ensemble_summary["consensus_level"],
+            summary_reasoning=ensemble_summary["summary_reasoning"],
+            summary_feedback=ensemble_summary["summary_feedback"],
             participating_judge_decision_ids=",".join(map(str, decision_ids)),
         )
 
@@ -390,7 +407,7 @@ class DebateRunner:
         logger.info(f"Saved ensemble summary {ensemble_id} for debate {debate_id}")
 
     def display_judge_results(
-        self, db_id: int, judge_result: JudgeDecision | dict[str, Any] | None
+        self, db_id: int, judge_result: JudgeDecision | EnsembleResultData | None
     ) -> None:
         """Load and display judge results from database."""
         try:

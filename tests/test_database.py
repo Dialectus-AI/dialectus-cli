@@ -30,7 +30,9 @@ class TestDatabaseManager:
             assert "criterion_scores" in tables
             assert "ensemble_summary" in tables
 
-    def test_save_and_load_debate(self, temp_db: str, sample_debate_data: DebateTranscriptData):
+    def test_save_and_load_debate(
+        self, temp_db: str, sample_debate_data: DebateTranscriptData
+    ):
         db = DatabaseManager(db_path=temp_db)
         debate_id = db.save_debate(sample_debate_data)
 
@@ -42,7 +44,9 @@ class TestDatabaseManager:
         assert loaded.metadata.format == "oxford"
         assert len(loaded.messages) == 2
 
-    def test_list_transcripts(self, temp_db: str, sample_debate_data: DebateTranscriptData):
+    def test_list_transcripts(
+        self, temp_db: str, sample_debate_data: DebateTranscriptData
+    ):
         db = DatabaseManager(db_path=temp_db)
 
         debate_id_1 = db.save_debate(sample_debate_data)
@@ -55,7 +59,9 @@ class TestDatabaseManager:
             debate_id_2,
         }
 
-    def test_list_transcripts_with_limit(self, temp_db: str, sample_debate_data: DebateTranscriptData):
+    def test_list_transcripts_with_limit(
+        self, temp_db: str, sample_debate_data: DebateTranscriptData
+    ):
         db = DatabaseManager(db_path=temp_db)
 
         for _ in range(5):

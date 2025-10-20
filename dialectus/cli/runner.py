@@ -400,8 +400,8 @@ class DebateRunner:
                 and judge_result.get("type") == "ensemble"
             ):
                 # Load ensemble summary - raises if not found
-                ensemble_summary: EnsembleSummaryRow = (
-                    self.db.load_ensemble_summary(db_id)
+                ensemble_summary: EnsembleSummaryRow = self.db.load_ensemble_summary(
+                    db_id
                 )
 
                 # Load all individual decisions
@@ -431,11 +431,13 @@ class DebateRunner:
                 display_judge_decision(self.console, self.config, decision_dict)
             else:
                 # Single judge case - raises if not found
-                judge_decision: JudgeDecisionWithScores = (
-                    self.db.load_judge_decision(db_id)
+                judge_decision: JudgeDecisionWithScores = self.db.load_judge_decision(
+                    db_id
                 )
                 # Pydantic models can be converted to dict for display functions
-                display_judge_decision(self.console, self.config, judge_decision.model_dump())
+                display_judge_decision(
+                    self.console, self.config, judge_decision.model_dump()
+                )
 
         except (
             EnsembleSummaryNotFoundError,

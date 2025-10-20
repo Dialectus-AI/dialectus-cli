@@ -32,7 +32,9 @@ def sample_debate_data() -> DebateTranscriptData:
             format="oxford",
             participants={
                 "model_a": ParticipantInfo(name="qwen2.5:7b", personality="analytical"),
-                "model_b": ParticipantInfo(name="llama3.2:3b", personality="passionate"),
+                "model_b": ParticipantInfo(
+                    name="llama3.2:3b", personality="passionate"
+                ),
             },
             final_phase="closing",
             total_rounds=3,

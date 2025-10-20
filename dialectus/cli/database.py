@@ -103,9 +103,9 @@ class DatabaseManager:
                 (
                     metadata.topic,
                     metadata.format,
-                    json.dumps(
-                        {k: v.model_dump() for k, v in metadata.participants.items()}
-                    ),
+                    json.dumps({
+                        k: v.model_dump() for k, v in metadata.participants.items()
+                    }),
                     metadata.final_phase,
                     metadata.total_rounds,
                     metadata.saved_at,
@@ -315,7 +315,9 @@ class DatabaseManager:
                 """,
                 (debate_id,),
             )
-            messages = [MessageRow.model_validate(dict(row)) for row in cursor.fetchall()]
+            messages = [
+                MessageRow.model_validate(dict(row)) for row in cursor.fetchall()
+            ]
 
             return TranscriptData(metadata=debate, messages=messages)
 
@@ -386,7 +388,8 @@ class DatabaseManager:
                     (decision_dict["id"],),
                 )
                 criterion_scores = [
-                    CriterionScoreRow.model_validate(dict(row)) for row in cursor.fetchall()
+                    CriterionScoreRow.model_validate(dict(row))
+                    for row in cursor.fetchall()
                 ]
 
                 result = JudgeDecisionWithScores.model_validate({

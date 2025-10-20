@@ -83,9 +83,11 @@ class TestDatabaseManager:
         assert transcript_ids.issubset(set(ids))
 
     def test_load_nonexistent_transcript(self, temp_db: str):
+        from dialectus.cli.db_types import DebateNotFoundError
+
         db = DatabaseManager(db_path=temp_db)
-        loaded = db.load_transcript(99999)
-        assert loaded is None
+        with pytest.raises(DebateNotFoundError):
+            db.load_transcript(99999)
 
     def test_save_judge_decision(
         self,
@@ -218,11 +220,15 @@ class TestDatabaseManager:
         assert transcripts == []
 
     def test_load_nonexistent_judge_decision(self, temp_db: str):
+        from dialectus.cli.db_types import JudgeDecisionNotFoundError
+
         db = DatabaseManager(db_path=temp_db)
-        decision = db.load_judge_decision(99999)
-        assert decision is None
+        with pytest.raises(JudgeDecisionNotFoundError):
+            db.load_judge_decision(99999)
 
     def test_load_nonexistent_ensemble_summary(self, temp_db: str):
+        from dialectus.cli.db_types import EnsembleSummaryNotFoundError
+
         db = DatabaseManager(db_path=temp_db)
-        summary = db.load_ensemble_summary(99999)
-        assert summary is None
+        with pytest.raises(EnsembleSummaryNotFoundError):
+            db.load_ensemble_summary(99999)

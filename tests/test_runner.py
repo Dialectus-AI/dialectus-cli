@@ -5,9 +5,13 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from dialectus.cli.runner import DebateRunner, _safe_isoformat  # pyright: ignore[reportPrivateUsage]
+from dialectus.cli.runner import (
+    DebateRunner,
+    EnsembleResultData,
+    _safe_isoformat,  # pyright: ignore[reportPrivateUsage]
+)
 from dialectus.cli.config import AppConfig
-from dialectus.cli.db_types import DebateTranscriptData
+from dialectus.cli.db_types import DebateTranscriptData, JudgeDecisionWithScores
 from dialectus.engine.debate_engine import DebateContext, DebatePhase
 from dialectus.engine.judges.base import (
     JudgeDecision,
@@ -31,15 +35,19 @@ def mock_console() -> Mock:
 def mock_debate_context() -> Mock:
     context = Mock(spec=DebateContext)
     context.topic = "Should AI be regulated?"
+
+    # Create participants with actual string values (not Mock objects)
+    participant_a = Mock()
+    participant_a.name = "qwen2.5:7b"
+    participant_a.personality = "analytical"
+
+    participant_b = Mock()
+    participant_b.name = "llama3.2:3b"
+    participant_b.personality = "passionate"
+
     context.participants = {
-        "model_a": Mock(
-            name="qwen2.5:7b",
-            personality="analytical",
-        ),
-        "model_b": Mock(
-            name="llama3.2:3b",
-            personality="passionate",
-        ),
+        "model_a": participant_a,
+        "model_b": participant_b,
     }
     context.current_phase = DebatePhase.CLOSING
     context.current_round = 3
@@ -128,12 +136,15 @@ class TestDebateRunner:
                 return_value=mock_judge_decision
             )
 
+            # Mock the display method to avoid database calls
+            runner.display_judge_results = Mock()
+
             with patch("dialectus.cli.runner.create_judges", return_value=[Mock()]):
                 await runner.run_debate()
 
             runner.engine.initialize_debate.assert_called_once()
             runner.engine.run_full_debate.assert_called_once()
-            mock_console.print.assert_called()
+            runner.display_judge_results.assert_called_once_with(1, mock_judge_decision)
 
     @pytest.mark.asyncio
     async def test_run_debate_invalid_format(
@@ -260,7 +271,8 @@ class TestDebateRunner:
 
             args, _ = mock_db.save_debate.call_args
             transcript_payload = args[0]
-            assert transcript_payload["messages"][0]["timestamp"] is not None
+            # transcript_payload is now a Pydantic model, not a dict
+            assert transcript_payload.messages[0].timestamp is not None
 
     @pytest.mark.asyncio
     async def test_save_individual_decision(
@@ -316,12 +328,13 @@ class TestDebateRunner:
 
             debate_id = real_db.save_debate(sample_debate_data)
 
-            ensemble_result = {
+            ensemble_result: EnsembleResultData = {
                 "type": "ensemble",
                 "decisions": [mock_judge_decision, mock_judge_decision],
                 "ensemble_summary": {
                     "final_winner_id": "model_a",
                     "final_margin": 2.8,
+                    "ensemble_method": "majority_vote_with_tiebreaker",
                     "num_judges": 2,
                     "consensus_level": 0.95,
                     "summary_reasoning": "Unanimous",
@@ -367,22 +380,33 @@ class TestDebateRunner:
     ):
         with patch("dialectus.cli.runner.DatabaseManager") as mock_db_class:
             mock_db = Mock()
-            mock_db.load_judge_decision.return_value = {
-                "winner_id": "model_a",
-                "winner_margin": 2.5,
-                "overall_feedback": "Good",
-                "reasoning": "Clear",
-                "criterion_scores": [],
-                "metadata": {},
-            }
+            # Return proper Pydantic model, not dict
+            mock_db.load_judge_decision.return_value = JudgeDecisionWithScores(
+                id=1,
+                debate_id=1,
+                winner_id="model_a",
+                winner_margin=2.5,
+                overall_feedback="Good",
+                reasoning="Clear",
+                judge_model="test_model",
+                judge_provider="test_provider",
+                generation_time_ms=1000,
+                cost=0.001,
+                generation_id="test_gen",
+                cost_queried_at="2025-10-12T10:30:20",
+                created_at="2025-10-12T10:30:20",
+                criterion_scores=[],
+                metadata={},
+            )
             mock_db.load_ensemble_summary.return_value = None
             mock_db_class.return_value = mock_db
 
             runner = DebateRunner(mock_config, mock_console)
 
-            runner.display_judge_results(1, mock_judge_decision)
-
-            assert mock_console.print.call_count > 0
+            # Patch display_judge_decision to avoid actual display logic
+            with patch("dialectus.cli.runner.display_judge_decision") as mock_display:
+                runner.display_judge_results(1, mock_judge_decision)
+                mock_display.assert_called_once()
 
 
 class TestHelperFunctions:

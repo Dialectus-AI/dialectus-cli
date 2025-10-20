@@ -27,6 +27,7 @@ from dialectus.engine.judges.base import BaseJudge, JudgeDecision
 from dialectus.cli.database import DatabaseManager
 from dialectus.cli.db_types import (
     CriterionScoreRow,
+    EnsembleSummaryData,
     EnsembleSummaryNotFoundError,
     EnsembleSummaryRow,
     JudgeDecisionNotFoundError,
@@ -361,7 +362,7 @@ class DebateRunner:
             )
 
         # Save ensemble summary
-        ensemble_data: dict[str, Any] = {
+        ensemble_data: EnsembleSummaryData = {
             "final_winner_id": ensemble_summary["final_winner_id"],
             "final_margin": ensemble_summary["final_margin"],
             "ensemble_method": ensemble_summary.get("ensemble_method", "majority"),

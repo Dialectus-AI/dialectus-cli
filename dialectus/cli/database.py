@@ -8,12 +8,16 @@ from pathlib import Path
 from typing import Any, Generator
 
 from dialectus.cli.db_types import (
+    CriterionScoreRow,
     DebateNotFoundError,
+    DebateRow,
+    DebateTranscriptData,
     EnsembleSummaryData,
     EnsembleSummaryNotFoundError,
     EnsembleSummaryRow,
     JudgeDecisionNotFoundError,
     JudgeDecisionWithScores,
+    MessageRow,
     TranscriptData,
     TranscriptListRow,
 )
@@ -78,13 +82,13 @@ class DatabaseManager:
         finally:
             conn.close()
 
-    def save_debate(self, transcript_data: dict[str, Any]) -> int:
+    def save_debate(self, transcript_data: DebateTranscriptData) -> int:
         """Save debate transcript and messages. Returns debate ID."""
         with self.get_connection() as conn:
             cursor = conn.cursor()
 
             # Extract metadata
-            metadata = transcript_data["metadata"]
+            metadata = transcript_data.metadata
 
             # Insert debate record
             cursor.execute(
@@ -97,16 +101,18 @@ class DatabaseManager:
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
-                    metadata["topic"],
-                    metadata["format"],
-                    json.dumps(metadata["participants"]),
-                    metadata["final_phase"],
-                    metadata["total_rounds"],
-                    metadata["saved_at"],
-                    metadata["message_count"],
-                    metadata["word_count"],
-                    metadata["total_debate_time_ms"],
-                    json.dumps(metadata),
+                    metadata.topic,
+                    metadata.format,
+                    json.dumps(
+                        {k: v.model_dump() for k, v in metadata.participants.items()}
+                    ),
+                    metadata.final_phase,
+                    metadata.total_rounds,
+                    metadata.saved_at,
+                    metadata.message_count,
+                    metadata.word_count,
+                    metadata.total_debate_time_ms,
+                    json.dumps(metadata.model_dump()),
                 ),
             )
 
@@ -118,7 +124,7 @@ class DatabaseManager:
                 )
 
             # Insert messages
-            for message in transcript_data["messages"]:
+            for message in transcript_data.messages:
                 cursor.execute(
                     """
                     INSERT INTO messages (
@@ -130,17 +136,17 @@ class DatabaseManager:
                     """,
                     (
                         debate_id,
-                        message["speaker_id"],
-                        message["position"],
-                        message["phase"],
-                        message["round_number"],
-                        message["content"],
-                        message["timestamp"],
-                        message["word_count"],
-                        json.dumps(message.get("metadata", {})),
-                        message.get("cost"),
-                        message.get("generation_id"),
-                        message.get("cost_queried_at"),
+                        message.speaker_id,
+                        message.position,
+                        message.phase,
+                        message.round_number,
+                        message.content,
+                        message.timestamp,
+                        message.word_count,
+                        json.dumps(message.metadata or {}),
+                        message.cost,
+                        message.generation_id,
+                        message.cost_queried_at,
                     ),
                 )
 
@@ -242,14 +248,14 @@ class DatabaseManager:
                 """,
                 (
                     debate_id,
-                    ensemble_data["final_winner_id"],
-                    ensemble_data["final_margin"],
-                    ensemble_data["ensemble_method"],
-                    ensemble_data["num_judges"],
-                    ensemble_data["consensus_level"],
-                    ensemble_data["summary_reasoning"],
-                    ensemble_data["summary_feedback"],
-                    ensemble_data["participating_judge_decision_ids"],
+                    ensemble_data.final_winner_id,
+                    ensemble_data.final_margin,
+                    ensemble_data.ensemble_method,
+                    ensemble_data.num_judges,
+                    ensemble_data.consensus_level,
+                    ensemble_data.summary_reasoning,
+                    ensemble_data.summary_feedback,
+                    ensemble_data.participating_judge_decision_ids,
                 ),
             )
 
@@ -280,7 +286,7 @@ class DatabaseManager:
             )
 
             rows = cursor.fetchall()
-            return [dict(row) for row in rows]  # type: ignore[misc]
+            return [TranscriptListRow.model_validate(dict(row)) for row in rows]
 
     def load_transcript(self, debate_id: int) -> TranscriptData:
         """Load full debate transcript including messages.
@@ -298,7 +304,7 @@ class DatabaseManager:
             if not debate_row:
                 raise DebateNotFoundError(debate_id)
 
-            debate = dict(debate_row)
+            debate = DebateRow.model_validate(dict(debate_row))
 
             # Get messages
             cursor.execute(
@@ -309,9 +315,9 @@ class DatabaseManager:
                 """,
                 (debate_id,),
             )
-            messages = [dict(row) for row in cursor.fetchall()]
+            messages = [MessageRow.model_validate(dict(row)) for row in cursor.fetchall()]
 
-            return {"metadata": debate, "messages": messages}  # type: ignore[return-value]
+            return TranscriptData(metadata=debate, messages=messages)
 
     def load_judge_decision(self, debate_id: int) -> JudgeDecisionWithScores:
         """Load judge decision (single judge case).
@@ -332,7 +338,7 @@ class DatabaseManager:
             if not decision_row:
                 raise JudgeDecisionNotFoundError(debate_id)
 
-            decision = dict(decision_row)
+            decision_dict = dict(decision_row)
 
             # Get criterion scores
             cursor.execute(
@@ -340,18 +346,18 @@ class DatabaseManager:
                 SELECT * FROM criterion_scores
                 WHERE judge_decision_id = ?
                 """,
-                (decision["id"],),
+                (decision_dict["id"],),
             )
-            criterion_scores = [dict(row) for row in cursor.fetchall()]
+            criterion_scores = [
+                CriterionScoreRow.model_validate(dict(row)) for row in cursor.fetchall()
+            ]
 
             # Build the complete result
-            result: JudgeDecisionWithScores = {
-                **decision,  # type: ignore[misc]
-                "criterion_scores": criterion_scores,  # type: ignore[misc]
-                "metadata": {"judge_model": decision["judge_model"]},
-            }
-
-            return result
+            return JudgeDecisionWithScores.model_validate({
+                **decision_dict,
+                "criterion_scores": criterion_scores,
+                "metadata": {"judge_model": decision_dict["judge_model"]},
+            })
 
     def load_judge_decisions(self, debate_id: int) -> list[JudgeDecisionWithScores]:
         """Load all judge decisions for a debate (ensemble case).
@@ -371,21 +377,23 @@ class DatabaseManager:
 
             # Get criterion scores for each decision
             results: list[JudgeDecisionWithScores] = []
-            for decision in decision_rows:
+            for decision_dict in decision_rows:
                 cursor.execute(
                     """
                     SELECT * FROM criterion_scores
                     WHERE judge_decision_id = ?
                     """,
-                    (decision["id"],),
+                    (decision_dict["id"],),
                 )
-                criterion_scores = [dict(row) for row in cursor.fetchall()]
+                criterion_scores = [
+                    CriterionScoreRow.model_validate(dict(row)) for row in cursor.fetchall()
+                ]
 
-                result: JudgeDecisionWithScores = {
-                    **decision,  # type: ignore[misc]
-                    "criterion_scores": criterion_scores,  # type: ignore[misc]
-                    "metadata": {"judge_model": decision["judge_model"]},
-                }
+                result = JudgeDecisionWithScores.model_validate({
+                    **decision_dict,
+                    "criterion_scores": criterion_scores,
+                    "metadata": {"judge_model": decision_dict["judge_model"]},
+                })
                 results.append(result)
 
             return results
@@ -407,4 +415,4 @@ class DatabaseManager:
             if not row:
                 raise EnsembleSummaryNotFoundError(debate_id)
 
-            return dict(row)  # type: ignore[return-value]
+            return EnsembleSummaryRow.model_validate(dict(row))

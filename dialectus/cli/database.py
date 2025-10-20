@@ -7,6 +7,16 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Generator
 
+from dialectus.cli.db_types import (
+    DebateNotFoundError,
+    EnsembleSummaryNotFoundError,
+    EnsembleSummaryRow,
+    JudgeDecisionNotFoundError,
+    JudgeDecisionWithScores,
+    TranscriptData,
+    TranscriptListRow,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -253,7 +263,7 @@ class DatabaseManager:
 
     def list_transcripts(
         self, limit: int = 20, offset: int = 0
-    ) -> list[dict[str, Any]]:
+    ) -> list[TranscriptListRow]:
         """List debate transcripts (metadata only)."""
         with self.get_connection(read_only=True) as conn:
             cursor = conn.cursor()
@@ -269,10 +279,14 @@ class DatabaseManager:
             )
 
             rows = cursor.fetchall()
-            return [dict(row) for row in rows]
+            return [dict(row) for row in rows]  # type: ignore[misc]
 
-    def load_transcript(self, debate_id: int) -> dict[str, Any] | None:
-        """Load full debate transcript including messages."""
+    def load_transcript(self, debate_id: int) -> TranscriptData:
+        """Load full debate transcript including messages.
+
+        Raises:
+            DebateNotFoundError: If debate_id does not exist.
+        """
         with self.get_connection(read_only=True) as conn:
             cursor = conn.cursor()
 
@@ -281,7 +295,7 @@ class DatabaseManager:
             debate_row = cursor.fetchone()
 
             if not debate_row:
-                return None
+                raise DebateNotFoundError(debate_id)
 
             debate = dict(debate_row)
 
@@ -296,10 +310,14 @@ class DatabaseManager:
             )
             messages = [dict(row) for row in cursor.fetchall()]
 
-            return {"metadata": debate, "messages": messages}
+            return {"metadata": debate, "messages": messages}  # type: ignore[return-value]
 
-    def load_judge_decision(self, debate_id: int) -> dict[str, Any] | None:
-        """Load judge decision (single judge case)."""
+    def load_judge_decision(self, debate_id: int) -> JudgeDecisionWithScores:
+        """Load judge decision (single judge case).
+
+        Raises:
+            JudgeDecisionNotFoundError: If no judge decision exists for debate_id.
+        """
         with self.get_connection(read_only=True) as conn:
             cursor = conn.cursor()
 
@@ -311,7 +329,7 @@ class DatabaseManager:
             decision_row = cursor.fetchone()
 
             if not decision_row:
-                return None
+                raise JudgeDecisionNotFoundError(debate_id)
 
             decision = dict(decision_row)
 
@@ -325,13 +343,22 @@ class DatabaseManager:
             )
             criterion_scores = [dict(row) for row in cursor.fetchall()]
 
-            decision["criterion_scores"] = criterion_scores
-            decision["metadata"] = {"judge_model": decision["judge_model"]}
+            # Build the complete result
+            result: JudgeDecisionWithScores = {
+                **decision,  # type: ignore[misc]
+                "criterion_scores": criterion_scores,  # type: ignore[misc]
+                "metadata": {"judge_model": decision["judge_model"]},
+            }
 
-            return decision
+            return result
 
-    def load_judge_decisions(self, debate_id: int) -> list[dict[str, Any]]:
-        """Load all judge decisions for a debate (ensemble case)."""
+    def load_judge_decisions(self, debate_id: int) -> list[JudgeDecisionWithScores]:
+        """Load all judge decisions for a debate (ensemble case).
+
+        Returns:
+            List of judge decisions with criterion scores. Returns empty list
+            if no decisions exist (ensemble may not have been run yet).
+        """
         with self.get_connection(read_only=True) as conn:
             cursor = conn.cursor()
 
@@ -339,10 +366,11 @@ class DatabaseManager:
             cursor.execute(
                 "SELECT * FROM judge_decisions WHERE debate_id = ?", (debate_id,)
             )
-            decisions = [dict(row) for row in cursor.fetchall()]
+            decision_rows = [dict(row) for row in cursor.fetchall()]
 
             # Get criterion scores for each decision
-            for decision in decisions:
+            results: list[JudgeDecisionWithScores] = []
+            for decision in decision_rows:
                 cursor.execute(
                     """
                     SELECT * FROM criterion_scores
@@ -350,13 +378,23 @@ class DatabaseManager:
                     """,
                     (decision["id"],),
                 )
-                decision["criterion_scores"] = [dict(row) for row in cursor.fetchall()]
-                decision["metadata"] = {"judge_model": decision["judge_model"]}
+                criterion_scores = [dict(row) for row in cursor.fetchall()]
 
-            return decisions
+                result: JudgeDecisionWithScores = {
+                    **decision,  # type: ignore[misc]
+                    "criterion_scores": criterion_scores,  # type: ignore[misc]
+                    "metadata": {"judge_model": decision["judge_model"]},
+                }
+                results.append(result)
 
-    def load_ensemble_summary(self, debate_id: int) -> dict[str, Any] | None:
-        """Load ensemble summary."""
+            return results
+
+    def load_ensemble_summary(self, debate_id: int) -> EnsembleSummaryRow:
+        """Load ensemble summary.
+
+        Raises:
+            EnsembleSummaryNotFoundError: If no ensemble summary exists for debate_id.
+        """
         with self.get_connection(read_only=True) as conn:
             cursor = conn.cursor()
 
@@ -365,4 +403,7 @@ class DatabaseManager:
             )
             row = cursor.fetchone()
 
-            return dict(row) if row else None
+            if not row:
+                raise EnsembleSummaryNotFoundError(debate_id)
+
+            return dict(row)  # type: ignore[return-value]

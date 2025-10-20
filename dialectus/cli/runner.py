@@ -25,6 +25,13 @@ from dialectus.engine.formats import format_registry
 from dialectus.engine.judges.factory import create_judges
 from dialectus.engine.judges.base import BaseJudge, JudgeDecision
 from dialectus.cli.database import DatabaseManager
+from dialectus.cli.db_types import (
+    CriterionScoreRow,
+    EnsembleSummaryNotFoundError,
+    EnsembleSummaryRow,
+    JudgeDecisionNotFoundError,
+    JudgeDecisionWithScores,
+)
 
 from dialectus.cli.presentation import display_judge_decision
 
@@ -378,38 +385,50 @@ class DebateRunner:
                 isinstance(judge_result, dict)
                 and judge_result.get("type") == "ensemble"
             ):
-                # Load ensemble summary
-                ensemble_summary = self.db.load_ensemble_summary(db_id)
-                if ensemble_summary:
-                    # Load all individual decisions
-                    individual_decisions = self.db.load_judge_decisions(db_id)
+                # Load ensemble summary - raises if not found
+                ensemble_summary: EnsembleSummaryRow = (
+                    self.db.load_ensemble_summary(db_id)
+                )
 
-                    # Collect all criterion scores
-                    all_criterion_scores: list[dict[str, Any]] = []
-                    for decision in individual_decisions:
-                        all_criterion_scores.extend(decision["criterion_scores"])
+                # Load all individual decisions
+                individual_decisions: list[JudgeDecisionWithScores] = (
+                    self.db.load_judge_decisions(db_id)
+                )
 
-                    decision_dict: dict[str, Any] = {
-                        "winner_id": ensemble_summary["final_winner_id"],
-                        "winner_margin": ensemble_summary["final_margin"],
-                        "overall_feedback": ensemble_summary["summary_feedback"],
-                        "reasoning": ensemble_summary["summary_reasoning"],
-                        "criterion_scores": all_criterion_scores,
-                        "metadata": {
-                            "ensemble_size": ensemble_summary["num_judges"],
-                            "consensus_level": ensemble_summary["consensus_level"],
-                            "ensemble_method": ensemble_summary["ensemble_method"],
-                            "individual_decisions": individual_decisions,
-                        },
-                    }
+                # Collect all criterion scores
+                all_criterion_scores: list[CriterionScoreRow] = []
+                for decision in individual_decisions:
+                    all_criterion_scores.extend(decision["criterion_scores"])
 
-                    display_judge_decision(self.console, self.config, decision_dict)
+                decision_dict: dict[str, Any] = {
+                    "winner_id": ensemble_summary["final_winner_id"],
+                    "winner_margin": ensemble_summary["final_margin"],
+                    "overall_feedback": ensemble_summary["summary_feedback"],
+                    "reasoning": ensemble_summary["summary_reasoning"],
+                    "criterion_scores": all_criterion_scores,
+                    "metadata": {
+                        "ensemble_size": ensemble_summary["num_judges"],
+                        "consensus_level": ensemble_summary["consensus_level"],
+                        "ensemble_method": ensemble_summary["ensemble_method"],
+                        "individual_decisions": individual_decisions,
+                    },
+                }
+
+                display_judge_decision(self.console, self.config, decision_dict)
             else:
-                # Single judge case
-                judge_decision = self.db.load_judge_decision(db_id)
-                if judge_decision:
-                    display_judge_decision(self.console, self.config, judge_decision)
+                # Single judge case - raises if not found
+                judge_decision: JudgeDecisionWithScores = (
+                    self.db.load_judge_decision(db_id)
+                )
+                # TypedDict is compatible with dict at runtime but needs cast for type checker
+                display_judge_decision(self.console, self.config, cast(dict[str, Any], judge_decision))
 
-        except (ValueError, KeyError, OSError) as e:
+        except (
+            EnsembleSummaryNotFoundError,
+            JudgeDecisionNotFoundError,
+            ValueError,
+            KeyError,
+            OSError,
+        ) as e:
             logger.error(f"Failed to display judge results: {e}")
             self.console.print(f"\n[red]Failed to display judge results: {e}[/red]")

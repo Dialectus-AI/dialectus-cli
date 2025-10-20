@@ -226,7 +226,7 @@ class TestDebateRunner:
         runner.engine.initialize_debate = AsyncMock(return_value=mock_debate_context)
         runner.engine.run_full_debate = AsyncMock(return_value=mock_debate_context)
         runner.engine.judge_debate_with_judges = AsyncMock(
-            side_effect=Exception("Judge error")
+            side_effect=RuntimeError("Judge error")
         )
 
         with patch("dialectus.cli.runner.create_judges", return_value=[Mock()]):

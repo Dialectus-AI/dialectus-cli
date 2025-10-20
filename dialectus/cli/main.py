@@ -19,14 +19,12 @@ os.environ["PYTHONIOENCODING"] = "utf-8"
 
 import click
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.prompt import Confirm
 from rich.table import Table
 
 from dialectus.cli.config import AppConfig, get_default_config
 from dialectus.cli.runner import DebateRunner
 from dialectus.cli.database import DatabaseManager
-from dialectus.engine.models import ModelManager
 from dialectus.cli.presentation import display_debate_info, display_error
 
 
@@ -154,48 +152,112 @@ def debate(
 @cli.command()
 @click.pass_context
 def list_models(ctx: click.Context) -> None:
-    """List available models from Ollama and OpenRouter."""
+    """List available models from configured providers."""
     config: AppConfig = ctx.obj["config"]
 
     async def _list_models() -> None:
-        model_manager = ModelManager(config.system)
+        # Import provider modules and types at the top of the function
+        from typing import cast
+        from dialectus.engine.models.providers.ollama_provider import OllamaProvider
+        from dialectus.engine.models.providers.open_router_provider import (
+            OpenRouterProvider,
+        )
+        from dialectus.engine.models.base_types import BaseEnhancedModelInfo
 
-        try:
-            with Progress(
-                SpinnerColumn(), TextColumn("[progress.description]{task.description}")
-            ) as progress:
-                task = progress.add_task("Fetching available models...", total=None)
-                models = await model_manager.get_enhanced_models_typed()
-                progress.remove_task(task)
+        # Detect which providers are actually in use from the config
+        providers_in_use: set[str] = set()
 
-            if not models:
+        # Check debate models
+        for model_config in config.models.values():
+            providers_in_use.add(model_config.provider)
+
+        # Check judge models if configured
+        if config.judging.judge_provider:
+            providers_in_use.add(config.judging.judge_provider)
+
+        # Check topic generation model
+        providers_in_use.add(config.system.debate_topic_source)
+
+        if not providers_in_use:
+            console.print(
+                "[red]No providers configured in debate_config.json. "
+                "Please configure at least one model.[/red]"
+            )
+            return
+
+        all_models: list[BaseEnhancedModelInfo] = []
+        provider_classes = {
+            "ollama": OllamaProvider,
+            "openrouter": OpenRouterProvider,
+        }
+
+        # Query each provider that's in use
+        for provider_name in sorted(providers_in_use):
+            if provider_name not in provider_classes:
                 console.print(
-                    "[red]No models available. Make sure Ollama is running or"
-                    " OpenRouter is configured.[/red]"
+                    f"[yellow]Warning: Unknown provider '{provider_name}'[/yellow]"
                 )
-                return
+                continue
 
-            table = Table(title="Available Models")
-            table.add_column("Model ID", style="cyan")
-            table.add_column("Provider", style="magenta")
-            table.add_column("Description", style="dim")
+            console.print(f"Fetching models from {provider_name}...")
 
-            for model in sorted(models, key=lambda m: m.id):
-                table.add_row(
-                    model.id,
-                    model.provider,
-                    (
-                        model.description[:60] + "..."
-                        if len(model.description) > 60
-                        else model.description
-                    ),
+            try:
+                provider_class = provider_classes[provider_name]
+                provider = provider_class(config.system)
+
+                # Get enhanced models from this provider directly (bypassing ModelManager)
+                # to avoid the engine's blacklist filtering. The engine blacklists models
+                # that aren't language-focused or optimal for debates (e.g., vision models,
+                # coding models). The CLI allows users to experiment with any model they want.
+                provider_models = cast(
+                    list[BaseEnhancedModelInfo],
+                    await provider.get_enhanced_models(),  # type: ignore[misc]
+                )
+                all_models.extend(provider_models)
+
+                console.print(
+                    f"[green]OK[/green] Found {len(provider_models)} models from {provider_name}"
                 )
 
-            console.print(table)
+            except Exception as e:
+                console.print(
+                    f"[yellow]SKIP[/yellow] Could not fetch models from {provider_name}: {e}"
+                )
+                # Continue to next provider instead of failing completely
 
-        except Exception as e:
-            console.print(f"[red]Failed to fetch models: {e}[/red]")
-            raise
+        if not all_models:
+            console.print(
+                "\n[red]No models available from any configured provider.[/red]"
+            )
+            console.print("\nTroubleshooting:")
+            if "ollama" in providers_in_use:
+                console.print(
+                    "  • Ollama: Make sure Ollama is running at "
+                    f"{config.system.ollama_base_url}"
+                )
+            if "openrouter" in providers_in_use:
+                console.print("  • OpenRouter: Verify your API key is set correctly")
+            return
+
+        # Display results in a table
+        table = Table(title="Available Models")
+        table.add_column("Model ID", style="cyan")
+        table.add_column("Provider", style="magenta")
+        table.add_column("Description", style="dim")
+
+        for model in sorted(all_models, key=lambda m: m.id):
+            table.add_row(
+                model.id,
+                model.provider,
+                (
+                    model.description[:60] + "..."
+                    if len(model.description) > 60
+                    else model.description
+                ),
+            )
+
+        console.print()
+        console.print(table)
 
     try:
         asyncio.run(_list_models())

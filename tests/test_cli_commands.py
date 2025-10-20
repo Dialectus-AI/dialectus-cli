@@ -148,7 +148,9 @@ class TestCLICommands:
         mock_get_config.return_value = mock_app_config
 
         # Mock the provider classes that are imported inside list_models
-        with patch("dialectus.engine.models.providers.ollama_provider.OllamaProvider") as mock_ollama:
+        with patch(
+            "dialectus.engine.models.providers.ollama_provider.OllamaProvider"
+        ) as mock_ollama:
             mock_ollama_instance = Mock()
             mock_ollama_instance.get_enhanced_models = AsyncMock(
                 return_value=[
@@ -275,8 +277,14 @@ class TestCLICommands:
         mock_get_config.return_value = mock_app_config
 
         # Mock both providers to raise exceptions (all providers must fail for error exit)
-        with patch("dialectus.engine.models.providers.ollama_provider.OllamaProvider") as mock_ollama, \
-             patch("dialectus.engine.models.providers.open_router_provider.OpenRouterProvider") as mock_openrouter:
+        with (
+            patch(
+                "dialectus.engine.models.providers.ollama_provider.OllamaProvider"
+            ) as mock_ollama,
+            patch(
+                "dialectus.engine.models.providers.open_router_provider.OpenRouterProvider"
+            ) as mock_openrouter,
+        ):
             mock_ollama_instance = Mock()
             mock_ollama_instance.get_enhanced_models = AsyncMock(
                 side_effect=Exception("Connection failed")

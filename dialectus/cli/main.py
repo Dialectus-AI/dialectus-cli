@@ -240,16 +240,16 @@ def transcripts(limit: int) -> None:
         table.add_column("Date", style="dim")
 
         for transcript in transcript_list:
-            topic = transcript.get("topic", "Unknown")[:50]
-            if len(transcript.get("topic", "")) > 50:
+            topic = transcript.topic[:50]
+            if len(transcript.topic) > 50:
                 topic += "..."
 
             table.add_row(
-                str(transcript["id"]),
+                str(transcript.id),
                 topic,
-                transcript.get("format", "Unknown"),
-                str(transcript.get("message_count", 0)),
-                transcript.get("created_at", "Unknown"),
+                transcript.format,
+                str(transcript.message_count),
+                transcript.created_at,
             )
 
         console.print(table)

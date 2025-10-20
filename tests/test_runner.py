@@ -1,13 +1,13 @@
 """Tests for debate runner orchestration with async patterns and mocking."""
 
 from pathlib import Path
-from typing import Any
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
 from dialectus.cli.runner import DebateRunner, _safe_isoformat  # pyright: ignore[reportPrivateUsage]
 from dialectus.cli.config import AppConfig
+from dialectus.cli.db_types import DebateTranscriptData
 from dialectus.engine.debate_engine import DebateContext, DebatePhase
 from dialectus.engine.judges.base import (
     JudgeDecision,
@@ -269,7 +269,7 @@ class TestDebateRunner:
         mock_console: Mock,
         mock_judge_decision: JudgeDecision,
         temp_db: str,
-        sample_debate_data: dict[str, Any],
+        sample_debate_data: DebateTranscriptData,
     ):
         with patch("dialectus.cli.runner.DatabaseManager") as mock_db_class:
             mock_db = Mock()
@@ -295,7 +295,7 @@ class TestDebateRunner:
 
             loaded = real_db.load_judge_decision(debate_id)
             assert loaded is not None
-            assert loaded["winner_id"] == "model_a"
+            assert loaded.winner_id == "model_a"
 
     @pytest.mark.asyncio
     async def test_save_ensemble_result(
@@ -304,7 +304,7 @@ class TestDebateRunner:
         mock_console: Mock,
         mock_judge_decision: JudgeDecision,
         temp_db: str,
-        sample_debate_data: dict[str, Any],
+        sample_debate_data: DebateTranscriptData,
     ):
         with patch("dialectus.cli.runner.DatabaseManager") as mock_db_class:
             from dialectus.cli.database import DatabaseManager
@@ -333,8 +333,8 @@ class TestDebateRunner:
 
             loaded = real_db.load_ensemble_summary(debate_id)
             assert loaded is not None
-            assert loaded["final_winner_id"] == "model_a"
-            assert loaded["num_judges"] == 2
+            assert loaded.final_winner_id == "model_a"
+            assert loaded.num_judges == 2
 
     def test_display_message(
         self, mock_config: AppConfig, mock_console: Mock, temp_db: str
@@ -363,7 +363,7 @@ class TestDebateRunner:
         mock_console: Mock,
         mock_judge_decision: JudgeDecision,
         temp_db: str,
-        sample_debate_data: dict[str, Any],
+        sample_debate_data: DebateTranscriptData,
     ):
         with patch("dialectus.cli.runner.DatabaseManager") as mock_db_class:
             mock_db = Mock()

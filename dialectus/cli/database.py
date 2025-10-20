@@ -25,7 +25,7 @@ class DatabaseManager:
         self._ensure_schema()
 
     @contextmanager
-    def _get_connection(
+    def get_connection(
         self, read_only: bool = False
     ) -> Generator[sqlite3.Connection, None, None]:
         """Context manager for database connections with automatic commit/rollback."""
@@ -48,14 +48,6 @@ class DatabaseManager:
         finally:
             conn.close()
 
-    @contextmanager
-    def get_connection(
-        self, read_only: bool = False
-    ) -> Generator[sqlite3.Connection, None, None]:
-        """Public API for getting database connections (for testing)."""
-        with self._get_connection(read_only=read_only) as conn:
-            yield conn
-
     def _ensure_schema(self) -> None:
         """Create database schema if it doesn't exist."""
         conn = sqlite3.connect(self.db_path)
@@ -77,7 +69,7 @@ class DatabaseManager:
 
     def save_debate(self, transcript_data: dict[str, Any]) -> int:
         """Save debate transcript and messages. Returns debate ID."""
-        with self._get_connection() as conn:
+        with self.get_connection() as conn:
             cursor = conn.cursor()
 
             # Extract metadata
@@ -159,7 +151,7 @@ class DatabaseManager:
         cost_queried_at: str | None = None,
     ) -> int:
         """Save judge decision. Returns decision ID."""
-        with self._get_connection() as conn:
+        with self.get_connection() as conn:
             cursor = conn.cursor()
 
             cursor.execute(
@@ -199,7 +191,7 @@ class DatabaseManager:
         self, decision_id: int, criterion_data: list[dict[str, Any]]
     ) -> None:
         """Save criterion scores for a judge decision."""
-        with self._get_connection() as conn:
+        with self.get_connection() as conn:
             cursor = conn.cursor()
 
             for score in criterion_data:
@@ -225,7 +217,7 @@ class DatabaseManager:
         self, debate_id: int, ensemble_data: dict[str, Any]
     ) -> int:
         """Save ensemble summary. Returns summary ID."""
-        with self._get_connection() as conn:
+        with self.get_connection() as conn:
             cursor = conn.cursor()
 
             cursor.execute(
@@ -263,7 +255,7 @@ class DatabaseManager:
         self, limit: int = 20, offset: int = 0
     ) -> list[dict[str, Any]]:
         """List debate transcripts (metadata only)."""
-        with self._get_connection(read_only=True) as conn:
+        with self.get_connection(read_only=True) as conn:
             cursor = conn.cursor()
 
             cursor.execute(
@@ -281,7 +273,7 @@ class DatabaseManager:
 
     def load_transcript(self, debate_id: int) -> dict[str, Any] | None:
         """Load full debate transcript including messages."""
-        with self._get_connection(read_only=True) as conn:
+        with self.get_connection(read_only=True) as conn:
             cursor = conn.cursor()
 
             # Get debate metadata
@@ -308,7 +300,7 @@ class DatabaseManager:
 
     def load_judge_decision(self, debate_id: int) -> dict[str, Any] | None:
         """Load judge decision (single judge case)."""
-        with self._get_connection(read_only=True) as conn:
+        with self.get_connection(read_only=True) as conn:
             cursor = conn.cursor()
 
             # Get decision
@@ -340,7 +332,7 @@ class DatabaseManager:
 
     def load_judge_decisions(self, debate_id: int) -> list[dict[str, Any]]:
         """Load all judge decisions for a debate (ensemble case)."""
-        with self._get_connection(read_only=True) as conn:
+        with self.get_connection(read_only=True) as conn:
             cursor = conn.cursor()
 
             # Get all decisions
@@ -365,7 +357,7 @@ class DatabaseManager:
 
     def load_ensemble_summary(self, debate_id: int) -> dict[str, Any] | None:
         """Load ensemble summary."""
-        with self._get_connection(read_only=True) as conn:
+        with self.get_connection(read_only=True) as conn:
             cursor = conn.cursor()
 
             cursor.execute(

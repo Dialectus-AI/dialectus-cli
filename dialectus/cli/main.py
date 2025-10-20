@@ -120,6 +120,7 @@ def cli(ctx: click.Context, config: str | None, log_level: str | None) -> None:
 @click.option(
     "--format",
     "-f",
+    "debate_format",
     type=click.Choice(["parliamentary", "oxford", "socratic", "public_forum"]),
     help="Debate format",
 )
@@ -128,7 +129,7 @@ def cli(ctx: click.Context, config: str | None, log_level: str | None) -> None:
 def debate(
     ctx: click.Context,
     topic: str | None,
-    format: str | None,
+    debate_format: str | None,
     interactive: bool,
 ) -> None:
     """Start a debate between AI models using the engine directly."""
@@ -137,8 +138,8 @@ def debate(
     # Override config with CLI options
     if topic:
         config.debate.topic = topic
-    if format:
-        config.debate.format = format  # type: ignore[assignment]
+    if debate_format:
+        config.debate.format = debate_format
 
     # Display debate setup
     display_debate_info(console, config)

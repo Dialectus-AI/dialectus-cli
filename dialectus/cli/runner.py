@@ -27,11 +27,15 @@ from dialectus.engine.judges.base import BaseJudge, JudgeDecision
 from dialectus.cli.database import DatabaseManager
 from dialectus.cli.db_types import (
     CriterionScoreRow,
+    DebateMetadata,
+    DebateTranscriptData,
     EnsembleSummaryData,
     EnsembleSummaryNotFoundError,
     EnsembleSummaryRow,
     JudgeDecisionNotFoundError,
     JudgeDecisionWithScores,
+    MessageData,
+    ParticipantInfo,
 )
 
 from dialectus.cli.presentation import display_judge_decision
@@ -252,42 +256,51 @@ class DebateRunner:
         """Save debate transcript to database. Returns debate ID."""
         total_debate_time_ms = context.metadata.get("total_debate_time_ms", 0)
 
-        transcript_data = {
-            "metadata": {
-                "topic": context.topic,
-                "format": context.metadata.get("format", "unknown"),
-                "participants": {
-                    pid: {
-                        "name": p.name,
-                        "personality": p.personality,
-                    }
-                    for pid, p in context.participants.items()
-                },
-                "final_phase": context.current_phase.value,
-                "total_rounds": context.current_round,
-                "saved_at": datetime.now().isoformat(),
-                "message_count": len(context.messages),
-                "word_count": sum(len(m.content.split()) for m in context.messages),
-                "total_debate_time_ms": total_debate_time_ms,
-            },
-            "messages": [
-                {
-                    "speaker_id": m.speaker_id,
-                    "position": m.position.value,
-                    "phase": m.phase.value,
-                    "round_number": m.round_number,
-                    "content": m.content,
-                    "timestamp": _safe_isoformat(m.timestamp)
-                    or datetime.now().isoformat(),
-                    "word_count": len(m.content.split()),
-                    "metadata": m.metadata,
-                    "cost": m.cost,
-                    "generation_id": m.generation_id,
-                    "cost_queried_at": _safe_isoformat(m.cost_queried_at),
-                }
-                for m in context.messages
-            ],
+        # Build participant info
+        participants: dict[str, ParticipantInfo] = {
+            pid: ParticipantInfo(
+                name=p.name,
+                personality=p.personality,
+            )
+            for pid, p in context.participants.items()
         }
+
+        # Build metadata
+        metadata = DebateMetadata(
+            topic=context.topic,
+            format=context.metadata.get("format", "unknown"),
+            participants=participants,
+            final_phase=context.current_phase.value,
+            total_rounds=context.current_round,
+            saved_at=datetime.now().isoformat(),
+            message_count=len(context.messages),
+            word_count=sum(len(m.content.split()) for m in context.messages),
+            total_debate_time_ms=total_debate_time_ms,
+        )
+
+        # Build messages
+        messages: list[MessageData] = [
+            MessageData(
+                speaker_id=m.speaker_id,
+                position=m.position.value,
+                phase=m.phase.value,
+                round_number=m.round_number,
+                content=m.content,
+                timestamp=_safe_isoformat(m.timestamp) or datetime.now().isoformat(),
+                word_count=len(m.content.split()),
+                metadata=m.metadata,
+                cost=m.cost,
+                generation_id=m.generation_id,
+                cost_queried_at=_safe_isoformat(m.cost_queried_at),
+            )
+            for m in context.messages
+        ]
+
+        # Build complete transcript data
+        transcript_data = DebateTranscriptData(
+            metadata=metadata,
+            messages=messages,
+        )
 
         db_id = self.db.save_debate(transcript_data)
         logger.info(f"Saved transcript with database ID {db_id}")
@@ -362,16 +375,16 @@ class DebateRunner:
             )
 
         # Save ensemble summary
-        ensemble_data: EnsembleSummaryData = {
-            "final_winner_id": ensemble_summary["final_winner_id"],
-            "final_margin": ensemble_summary["final_margin"],
-            "ensemble_method": ensemble_summary.get("ensemble_method", "majority"),
-            "num_judges": ensemble_summary["num_judges"],
-            "consensus_level": ensemble_summary.get("consensus_level"),
-            "summary_reasoning": ensemble_summary.get("summary_reasoning"),
-            "summary_feedback": ensemble_summary.get("summary_feedback"),
-            "participating_judge_decision_ids": ",".join(map(str, decision_ids)),
-        }
+        ensemble_data = EnsembleSummaryData(
+            final_winner_id=ensemble_summary["final_winner_id"],
+            final_margin=ensemble_summary["final_margin"],
+            ensemble_method=ensemble_summary.get("ensemble_method", "majority"),
+            num_judges=ensemble_summary["num_judges"],
+            consensus_level=ensemble_summary.get("consensus_level"),
+            summary_reasoning=ensemble_summary.get("summary_reasoning"),
+            summary_feedback=ensemble_summary.get("summary_feedback"),
+            participating_judge_decision_ids=",".join(map(str, decision_ids)),
+        )
 
         ensemble_id = self.db.save_ensemble_summary(debate_id, ensemble_data)
         logger.info(f"Saved ensemble summary {ensemble_id} for debate {debate_id}")
@@ -399,18 +412,18 @@ class DebateRunner:
                 # Collect all criterion scores
                 all_criterion_scores: list[CriterionScoreRow] = []
                 for decision in individual_decisions:
-                    all_criterion_scores.extend(decision["criterion_scores"])
+                    all_criterion_scores.extend(decision.criterion_scores)
 
                 decision_dict: dict[str, Any] = {
-                    "winner_id": ensemble_summary["final_winner_id"],
-                    "winner_margin": ensemble_summary["final_margin"],
-                    "overall_feedback": ensemble_summary["summary_feedback"],
-                    "reasoning": ensemble_summary["summary_reasoning"],
+                    "winner_id": ensemble_summary.final_winner_id,
+                    "winner_margin": ensemble_summary.final_margin,
+                    "overall_feedback": ensemble_summary.summary_feedback,
+                    "reasoning": ensemble_summary.summary_reasoning,
                     "criterion_scores": all_criterion_scores,
                     "metadata": {
-                        "ensemble_size": ensemble_summary["num_judges"],
-                        "consensus_level": ensemble_summary["consensus_level"],
-                        "ensemble_method": ensemble_summary["ensemble_method"],
+                        "ensemble_size": ensemble_summary.num_judges,
+                        "consensus_level": ensemble_summary.consensus_level,
+                        "ensemble_method": ensemble_summary.ensemble_method,
                         "individual_decisions": individual_decisions,
                     },
                 }
@@ -421,8 +434,8 @@ class DebateRunner:
                 judge_decision: JudgeDecisionWithScores = (
                     self.db.load_judge_decision(db_id)
                 )
-                # TypedDict is compatible with dict at runtime but needs cast for type checker
-                display_judge_decision(self.console, self.config, cast(dict[str, Any], judge_decision))
+                # Pydantic models can be converted to dict for display functions
+                display_judge_decision(self.console, self.config, judge_decision.model_dump())
 
         except (
             EnsembleSummaryNotFoundError,

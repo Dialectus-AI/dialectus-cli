@@ -9,6 +9,7 @@ from typing import Any, Generator
 
 from dialectus.cli.db_types import (
     DebateNotFoundError,
+    EnsembleSummaryData,
     EnsembleSummaryNotFoundError,
     EnsembleSummaryRow,
     JudgeDecisionNotFoundError,
@@ -224,7 +225,7 @@ class DatabaseManager:
             logger.info(f"Saved {len(criterion_data)} criterion scores")
 
     def save_ensemble_summary(
-        self, debate_id: int, ensemble_data: dict[str, Any]
+        self, debate_id: int, ensemble_data: EnsembleSummaryData
     ) -> int:
         """Save ensemble summary. Returns summary ID."""
         with self.get_connection() as conn:
@@ -243,12 +244,12 @@ class DatabaseManager:
                     debate_id,
                     ensemble_data["final_winner_id"],
                     ensemble_data["final_margin"],
-                    ensemble_data.get("ensemble_method", "majority"),
+                    ensemble_data["ensemble_method"],
                     ensemble_data["num_judges"],
-                    ensemble_data.get("consensus_level"),
-                    ensemble_data.get("summary_reasoning"),
-                    ensemble_data.get("summary_feedback"),
-                    ensemble_data.get("participating_judge_decision_ids"),
+                    ensemble_data["consensus_level"],
+                    ensemble_data["summary_reasoning"],
+                    ensemble_data["summary_feedback"],
+                    ensemble_data["participating_judge_decision_ids"],
                 ),
             )
 

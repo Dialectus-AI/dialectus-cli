@@ -18,6 +18,12 @@ from textwrap import dedent
 
 logger = logging.getLogger(__name__)
 
+# Display configuration constants for UI layout
+MAX_REASONING_PREVIEW_LENGTH = 150  # Characters to show in individual judge reasoning preview
+FEEDBACK_COLUMN_WIDTH = 50  # Width of feedback column in scoring tables
+FEEDBACK_TRUNCATE_LENGTH = 47  # Truncate feedback at this length (with "..." = 50)
+LINE_WRAP_LENGTH = 100  # Maximum line length before wrapping in reasoning display
+
 
 def display_debate_info(console: Console, config: AppConfig) -> None:
     """Render the core debate configuration details."""
@@ -201,7 +207,7 @@ def display_individual_judge_decision(
     if reasoning and not _is_structured_data(reasoning):
         console.print(
             "[dim]Reasoning:"
-            f" {reasoning[:150]}{'...' if len(reasoning) > 150 else ''}[/dim]"
+            f" {reasoning[:MAX_REASONING_PREVIEW_LENGTH]}{'...' if len(reasoning) > MAX_REASONING_PREVIEW_LENGTH else ''}[/dim]"
         )
 
 
@@ -323,7 +329,7 @@ def _display_detailed_scoring(
     scoring_table.add_column("Participant", style="magenta", width=25)
     scoring_table.add_column("Criterion", style="cyan", width=15)
     scoring_table.add_column("Score", justify="center", style="yellow", width=8)
-    scoring_table.add_column("Feedback", style="dim", width=50)
+    scoring_table.add_column("Feedback", style="dim", width=FEEDBACK_COLUMN_WIDTH)
 
     for score in criterion_scores:
         participant_id = score.get("participant_id", "unknown")
@@ -347,7 +353,7 @@ def _display_detailed_scoring(
             participant_display_name,
             criterion.title(),
             f"{score_value:.1f}/10" if score_value is not None else "N/A",
-            feedback[:47] + "..." if len(feedback) > 50 else feedback,
+            feedback[:FEEDBACK_TRUNCATE_LENGTH] + "..." if len(feedback) > FEEDBACK_COLUMN_WIDTH else feedback,
         )
 
     console.print(scoring_table)
@@ -360,12 +366,12 @@ def _display_reasoning(console: Console, reasoning: str | None) -> None:
     console.print("\n[bold blue]Judge's Reasoning:[/bold blue]")
     reasoning_lines = reasoning.split("\n")
     for line in reasoning_lines:
-        if len(line) > 100:
+        if len(line) > LINE_WRAP_LENGTH:
             words = line.split()
             current_line: list[str] = []
             for word in words:
                 candidate = " ".join(current_line + [word])
-                if len(candidate) <= 100:
+                if len(candidate) <= LINE_WRAP_LENGTH:
                     current_line.append(word)
                 else:
                     if current_line:

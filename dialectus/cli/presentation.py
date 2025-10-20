@@ -19,7 +19,9 @@ from textwrap import dedent
 logger = logging.getLogger(__name__)
 
 # Display configuration constants for UI layout
-MAX_REASONING_PREVIEW_LENGTH = 150  # Characters to show in individual judge reasoning preview
+MAX_REASONING_PREVIEW_LENGTH = (
+    150  # Characters to show in individual judge reasoning preview
+)
 FEEDBACK_COLUMN_WIDTH = 50  # Width of feedback column in scoring tables
 FEEDBACK_TRUNCATE_LENGTH = 47  # Truncate feedback at this length (with "..." = 50)
 LINE_WRAP_LENGTH = 100  # Maximum line length before wrapping in reasoning display
@@ -353,7 +355,9 @@ def _display_detailed_scoring(
             participant_display_name,
             criterion.title(),
             f"{score_value:.1f}/10" if score_value is not None else "N/A",
-            feedback[:FEEDBACK_TRUNCATE_LENGTH] + "..." if len(feedback) > FEEDBACK_COLUMN_WIDTH else feedback,
+            feedback[:FEEDBACK_TRUNCATE_LENGTH] + "..."
+            if len(feedback) > FEEDBACK_COLUMN_WIDTH
+            else feedback,
         )
 
     console.print(scoring_table)

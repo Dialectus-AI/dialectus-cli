@@ -100,8 +100,9 @@ class DebateRunner:
                 data: MessageStartEventData | MessageCompleteEventData,
             ):
                 if event == MessageEventType.MESSAGE_COMPLETE:
-                    # TypedDict is compatible with dict[str, Any] at runtime
-                    self.display_message(dict(data))
+                    # Type narrowing: we know data is MessageCompleteEventData here
+                    message_data = cast(MessageCompleteEventData, data)
+                    self.display_message(message_data)
 
             # Display Dialectus logo
             self.console.print(
@@ -161,7 +162,7 @@ class DebateRunner:
 
                     judge_result = await self.engine.judge_debate_with_judges(judges)
 
-                except Exception as e:
+                except (ProviderRateLimitError, ValueError, RuntimeError) as e:
                     judging_succeeded = False
                     logger.error(f"Judge evaluation failed: {e}")
                     self.console.print(
@@ -189,7 +190,7 @@ class DebateRunner:
                     f"\n[green]✓ Debate completed and saved (ID: {db_id})[/green]\n"
                 )
 
-            except Exception as e:
+            except (RuntimeError, ValueError, OSError) as e:
                 logger.error(f"Failed to save transcript: {e}")
                 self.console.print(
                     f"\n[red]Failed to save transcript: {e}[/red]", style="bold"
@@ -199,12 +200,14 @@ class DebateRunner:
         except ProviderRateLimitError as e:
             logger.error("Debate failed due to provider rate limit: %s", e)
             raise
-        except Exception as e:
+        except (ValueError, RuntimeError, OSError) as e:
             logger.error(f"Debate failed: {e}")
             self.console.print(f"\n[red]Debate failed: {e}[/red]", style="bold")
             raise
 
-    def display_message(self, message: dict[str, Any]) -> None:
+    def display_message(
+        self, message: MessageCompleteEventData | dict[str, Any]
+    ) -> None:
         """Display a debate message with Rich formatting."""
         style_map = {"pro": "green", "con": "red", "neutral": "blue"}
 
@@ -407,6 +410,6 @@ class DebateRunner:
                 if judge_decision:
                     display_judge_decision(self.console, self.config, judge_decision)
 
-        except Exception as e:
+        except (ValueError, KeyError, OSError) as e:
             logger.error(f"Failed to display judge results: {e}")
             self.console.print(f"\n[red]Failed to display judge results: {e}[/red]")

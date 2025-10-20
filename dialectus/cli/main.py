@@ -5,7 +5,6 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Mapping, Protocol, cast
 
 # Allow running this module either as ``python -m dialectus.cli`` or
 # ``python dialectus/cli/main.py`` by ensuring the project root is on sys.path.
@@ -27,13 +26,8 @@ from rich.table import Table
 from dialectus.cli.config import AppConfig, get_default_config
 from dialectus.cli.runner import DebateRunner
 from dialectus.cli.database import DatabaseManager
-from dialectus.engine.models.manager import ModelManager
+from dialectus.engine.models import ModelManager
 from dialectus.cli.presentation import display_debate_info, display_error
-
-
-class ModelInfo(Protocol):
-    provider: str
-    description: str
 
 
 console = Console(force_terminal=True, legacy_windows=False)
@@ -171,13 +165,7 @@ def list_models(ctx: click.Context) -> None:
                 SpinnerColumn(), TextColumn("[progress.description]{task.description}")
             ) as progress:
                 task = progress.add_task("Fetching available models...", total=None)
-                raw_models = await model_manager.get_available_models()
-
-                # Type guard for model catalog structure
-                if not raw_models:
-                    raise TypeError("Empty model listing received")
-
-                models = cast(Mapping[str, ModelInfo], raw_models)
+                models = await model_manager.get_enhanced_models_typed()
                 progress.remove_task(task)
 
             if not models:
@@ -192,14 +180,14 @@ def list_models(ctx: click.Context) -> None:
             table.add_column("Provider", style="magenta")
             table.add_column("Description", style="dim")
 
-            for model_id, model_info in sorted(models.items()):
+            for model in sorted(models, key=lambda m: m.id):
                 table.add_row(
-                    model_id,
-                    model_info.provider,
+                    model.id,
+                    model.provider,
                     (
-                        model_info.description[:60] + "..."
-                        if len(model_info.description) > 60
-                        else model_info.description
+                        model.description[:60] + "..."
+                        if len(model.description) > 60
+                        else model.description
                     ),
                 )
 

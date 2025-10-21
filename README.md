@@ -4,6 +4,8 @@
 
 Command-line interface for the Dialectus AI debate system. Run AI debates locally with Ollama or cloud models via OpenRouter.
 
+> **Related Project:** This CLI uses the [dialectus-engine](https://github.com/dialectus-ai/dialectus-engine) library for all debate orchestration. Check out the engine repository for the core debate logic, API documentation, and library usage examples.
+
 <img src="https://github.com/user-attachments/assets/fba4d1f8-9561-4971-a2fa-ec24f01865a8" alt="CLI" width=700>
 
 ## Installation
@@ -88,7 +90,10 @@ dialectus debate
 Edit `debate_config.json` to configure:
 - **Models**: Debate participants (Ollama or OpenRouter)
 - **Judging**: AI judge models and evaluation criteria
-- **System**: Ollama/OpenRouter settings
+  - Use a single judge: `"judge_models": ["openthinker:7b"]`
+  - Use ensemble judging with multiple judges: `"judge_models": ["openthinker:7b", "llama3.2:3b", "qwen2.5:3b"]`
+  - The engine aggregates multiple judges using majority voting with consensus analysis
+- **System**: Ollama/OpenRouter settings, topic generation, logging
 
 ## Commands
 
@@ -125,9 +130,11 @@ CLI → DebateRunner → DebateEngine → Rich Console
     SQLite Database
 ```
 
-- **No API layer** - Imports engine directly
+- **No API layer** - Imports [dialectus-engine](https://github.com/dialectus-ai/dialectus-engine) directly as a Python library
 - **Local-first** - Runs completely offline with Ollama
 - **SQLite storage** - Simple, portable database
+
+For more details on the core engine implementation, see the [dialectus-engine repository](https://github.com/dialectus-ai/dialectus-engine).
 
 ## Development
 

@@ -393,13 +393,13 @@ class DebateRunner:
 
         # Save ensemble summary
         ensemble_data = EnsembleSummaryData(
-            final_winner_id=ensemble_summary["final_winner_id"],
-            final_margin=ensemble_summary["final_margin"],
-            ensemble_method=ensemble_summary["ensemble_method"],
-            num_judges=ensemble_summary["num_judges"],
-            consensus_level=ensemble_summary["consensus_level"],
-            summary_reasoning=ensemble_summary["summary_reasoning"],
-            summary_feedback=ensemble_summary["summary_feedback"],
+            final_winner_id=ensemble_summary.final_winner_id,
+            final_margin=ensemble_summary.final_margin,
+            ensemble_method=ensemble_summary.ensemble_method,
+            num_judges=ensemble_summary.num_judges,
+            consensus_level=ensemble_summary.consensus_level,
+            summary_reasoning=ensemble_summary.summary_reasoning,
+            summary_feedback=ensemble_summary.summary_feedback,
             participating_judge_decision_ids=",".join(map(str, decision_ids)),
         )
 

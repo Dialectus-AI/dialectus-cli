@@ -2,7 +2,7 @@
 
 # Dialectus CLI
 
-Command-line interface for the Dialectus AI debate system. Run AI debates locally with Ollama or cloud models via OpenRouter and Anthropic.
+Command-line interface for the Dialectus AI debate system. Run AI debates locally with Ollama or cloud models via OpenRouter, Anthropic, or OpenAI.
 
 > **Related Project:** This CLI uses the [dialectus-engine](https://github.com/dialectus-ai/dialectus-engine) library for all debate orchestration. Check out the engine repository for the core debate logic, API documentation, and library usage examples.
 
@@ -56,6 +56,7 @@ pip install -e ".[dev]"
 - **uv** (recommended): Fast Python package manager - [Install uv](https://docs.astral.sh/uv/getting-started/installation/)
 - **Ollama** (if using local models): Running at `http://localhost:11434`
 - **API keys** (if using cloud models): Set via environment variables
+  - **OpenAI**: For GPT-4.1, GPT-4o, GPT-4o Mini, etc.
   - **Anthropic**: For Claude models (3.5 Sonnet, Haiku, etc.)
   - **OpenRouter**: For access to 100+ models including Claude, GPT-4, Llama, etc.
 
@@ -63,14 +64,17 @@ pip install -e ".[dev]"
 
 ```bash
 # Linux/macOS
+export OPENAI_API_KEY="sk-your-openai-key"
 export ANTHROPIC_API_KEY="sk-ant-api03-..."
 export OPENROUTER_API_KEY="sk-or-v1-..."
 
 # Windows PowerShell
+$env:OPENAI_API_KEY="sk-your-openai-key"
 $env:ANTHROPIC_API_KEY="sk-ant-api03-..."
 $env:OPENROUTER_API_KEY="sk-or-v1-..."
 
 # Windows CMD
+set OPENAI_API_KEY=sk-your-openai-key
 set ANTHROPIC_API_KEY=sk-ant-api03-...
 set OPENROUTER_API_KEY=sk-or-v1-...
 ```
@@ -93,15 +97,16 @@ dialectus debate
 ## Configuration
 
 Edit `debate_config.json` to configure:
-- **Models**: Debate participants (Ollama, OpenRouter, or Anthropic)
+- **Models**: Debate participants (Ollama, OpenRouter, Anthropic, or OpenAI)
   - **Ollama** (local): `"provider": "ollama"`, `"name": "llama3.2:3b"`
   - **OpenRouter** (cloud): `"provider": "openrouter"`, `"name": "anthropic/claude-3.5-sonnet"`
   - **Anthropic** (direct): `"provider": "anthropic"`, `"name": "claude-3-5-sonnet-20241022"`
+  - **OpenAI** (direct): `"provider": "openai"`, `"name": "gpt-4o-mini"`
 - **Judging**: AI judge models and evaluation criteria
   - Use a single judge: `"judge_models": ["openthinker:7b"]`
   - Use ensemble judging with multiple judges: `"judge_models": ["openthinker:7b", "llama3.2:3b", "qwen2.5:3b"]`
   - The engine aggregates multiple judges using majority voting with consensus analysis
-- **System**: Provider settings (Ollama/OpenRouter/Anthropic), topic generation, logging
+- **System**: Provider settings (Ollama/OpenRouter/Anthropic/OpenAI), topic generation, logging
 
 ## Commands
 
@@ -131,6 +136,54 @@ uv run dialectus transcripts --limit 50
 Transcripts are saved to SQLite database at `~/.dialectus/debates.db`
 
 ## Provider Setup
+
+### OpenAI (GPT Models)
+
+**Use OpenAI's native API for GPT-4.1, GPT-4o, GPT-4o Mini, and more:**
+
+1. **Get an API key**: Create one at [platform.openai.com](https://platform.openai.com/)
+
+2. **Set your API key** (choose one method):
+
+   **Environment variable (recommended):**
+   ```bash
+   export OPENAI_API_KEY="sk-your-openai-key"
+   ```
+
+   **Or in `debate_config.json`:**
+   ```json
+   {
+     "system": {
+       "openai": {
+         "api_key": "sk-your-openai-key",
+         "base_url": "https://api.openai.com/v1",
+         "max_retries": 3,
+         "timeout": 60
+       }
+     }
+   }
+   ```
+
+3. **Configure models** using OpenAI model IDs:
+   ```json
+   {
+     "models": {
+       "model_a": {
+         "name": "gpt-4o-mini",
+         "provider": "openai",
+         "personality": "analytical",
+         "max_tokens": 300,
+         "temperature": 0.7
+       }
+     }
+   }
+   ```
+
+**Popular OpenAI models:**
+- `gpt-4.1` – frontier reasoning with multimodal support
+- `gpt-4.1-mini` – cost-efficient GPT-4.1 variant
+- `gpt-4o` – balanced quality and speed
+- `gpt-4o-mini` – fast, low-cost assistant model
 
 ### Anthropic (Claude Models)
 

@@ -184,6 +184,7 @@ def list_models(ctx: click.Context) -> None:
         from dialectus.engine.models.providers.anthropic_provider import (
             AnthropicProvider,
         )
+        from dialectus.engine.models.providers.openai_provider import OpenAIProvider
         from dialectus.engine.models.base_types import BaseEnhancedModelInfo
 
         # Detect which providers are actually in use from the config
@@ -212,6 +213,7 @@ def list_models(ctx: click.Context) -> None:
             "ollama": OllamaProvider,
             "openrouter": OpenRouterProvider,
             "anthropic": AnthropicProvider,
+            "openai": OpenAIProvider,
         }
 
         # Query each provider that's in use

@@ -13,6 +13,7 @@ from dialectus.engine.config.settings import (
     SystemConfig,
     OllamaConfig,
     OpenRouterConfig,
+    OpenAIConfig,
     AnthropicConfig,
 )
 
@@ -30,6 +31,7 @@ def get_default_config() -> AppConfig:
     Environment variables checked (in priority order):
     - OPENROUTER_API_KEY: OpenRouter API key (overrides config file)
     - ANTHROPIC_API_KEY: Anthropic API key (overrides config file)
+    - OPENAI_API_KEY: OpenAI API key (overrides config file)
     """
     config_path = Path("debate_config.json")
 
@@ -51,6 +53,10 @@ def get_default_config() -> AppConfig:
     anthropic_key_from_env = os.environ.get("ANTHROPIC_API_KEY")
     if anthropic_key_from_env:
         config.system.anthropic.api_key = anthropic_key_from_env
+
+    openai_key_from_env = os.environ.get("OPENAI_API_KEY")
+    if openai_key_from_env:
+        config.system.openai.api_key = openai_key_from_env
 
     # Validate API keys for configured providers
     _validate_provider_api_keys(config)
@@ -80,6 +86,14 @@ def _validate_provider_api_keys(config: AppConfig) -> None:
         _print_api_key_error("Anthropic", "ANTHROPIC_API_KEY")
         raise ConfigurationError("Missing Anthropic API key")
 
+    # Check OpenAI
+    uses_openai = any(
+        model.provider == "openai" for model in config.models.values()
+    )
+    if uses_openai and not config.system.openai.api_key:
+        _print_api_key_error("OpenAI", "OPENAI_API_KEY")
+        raise ConfigurationError("Missing OpenAI API key")
+
 
 def _print_api_key_error(provider_name: str, env_var_name: str) -> None:
     """Print a user-friendly error message for missing API keys."""
@@ -108,6 +122,7 @@ __all__ = [
     "SystemConfig",
     "OllamaConfig",
     "OpenRouterConfig",
+    "OpenAIConfig",
     "AnthropicConfig",
     "ConfigurationError",
     "get_default_config",

@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import pytest
 
-from dialectus.cli.config import get_default_config, AppConfig
+from dialectus.cli.config import get_default_config, AppConfig, ConfigurationError
 
 
 class TestConfigLoading:
@@ -34,6 +34,7 @@ class TestConfigLoading:
         self, temp_config_file: Path, monkeypatch: pytest.MonkeyPatch
     ):
         monkeypatch.setenv("OPENROUTER_API_KEY", "test-api-key-from-env")
+        monkeypatch.setenv("OPENAI_API_KEY", "test-openai-from-env")
 
         with patch("dialectus.cli.config.Path") as mock_path_class:
             mock_path_instance = mock_path_class.return_value
@@ -45,6 +46,7 @@ class TestConfigLoading:
                 config = get_default_config()
 
                 assert config.system.openrouter.api_key == "test-api-key-from-env"
+                assert config.system.openai.api_key == "test-openai-from-env"
 
     def test_openrouter_validation_missing_key(
         self, temp_config_file: Path, monkeypatch: pytest.MonkeyPatch
@@ -64,7 +66,7 @@ class TestConfigLoading:
                 "dialectus.cli.config.AppConfig.load_from_file", return_value=config
             ):
                 with pytest.raises(
-                    ValueError, match="OpenRouter models configured but no API key"
+                    ConfigurationError, match="Missing OpenRouter API key"
                 ):
                     get_default_config()
 
@@ -82,6 +84,44 @@ class TestConfigLoading:
                 config = get_default_config()
 
                 assert config.system.openrouter.api_key == "test-key-in-config"
+                assert config.system.openai.api_key is None
+
+    def test_openai_validation_missing_key(
+        self, temp_config_file: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        if "OPENAI_API_KEY" in os.environ:
+            monkeypatch.delenv("OPENAI_API_KEY")
+
+        config = AppConfig.load_from_file(temp_config_file)
+        config.models["model_a"].provider = "openai"
+        config.system.openai.api_key = None
+
+        with patch("dialectus.cli.config.Path") as mock_path_class:
+            mock_path_instance = mock_path_class.return_value
+            mock_path_instance.exists.return_value = True
+
+            with patch(
+                "dialectus.cli.config.AppConfig.load_from_file", return_value=config
+            ):
+                with pytest.raises(
+                    ConfigurationError, match="Missing OpenAI API key"
+                ):
+                    get_default_config()
+
+    def test_openai_with_valid_key(self, temp_config_file: Path):
+        with patch("dialectus.cli.config.Path") as mock_path_class:
+            mock_path_instance = mock_path_class.return_value
+            mock_path_instance.exists.return_value = True
+
+            with patch("dialectus.cli.config.AppConfig.load_from_file") as mock_load:
+                config = AppConfig.load_from_file(temp_config_file)
+                config.models["model_a"].provider = "openai"
+                config.system.openai.api_key = "openai-key"
+                mock_load.return_value = config
+
+                config = get_default_config()
+
+                assert config.system.openai.api_key == "openai-key"
 
     def test_ollama_models_no_key_required(
         self, temp_config_file: Path, monkeypatch: pytest.MonkeyPatch

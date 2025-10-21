@@ -173,6 +173,30 @@ class TestCLICommands:
             assert result.exit_code == 0
             assert "Available Models" in result.output or "Fetching" in result.output
 
+    @patch("dialectus.cli.main.get_default_config")
+    def test_list_models_includes_openai(
+        self,
+        mock_get_config: Mock,
+        cli_runner: CliRunner,
+        mock_app_config: AppConfig,
+    ):
+        config = mock_app_config.model_copy(deep=True)
+        config.models["model_a"].provider = "openai"
+        config.system.openai.api_key = "test-key"
+        mock_get_config.return_value = config
+
+        with patch(
+            "dialectus.engine.models.providers.openai_provider.OpenAIProvider"
+        ) as mock_openai:
+            mock_instance = Mock()
+            mock_instance.get_enhanced_models = AsyncMock(return_value=[])
+            mock_openai.return_value = mock_instance
+
+            result = cli_runner.invoke(cli, ["list-models"])
+
+            assert result.exit_code == 0
+            mock_openai.assert_called_once_with(config.system)
+
     @patch("dialectus.cli.main.DatabaseManager")
     @patch("dialectus.cli.main.get_default_config")
     def test_transcripts_command_empty(

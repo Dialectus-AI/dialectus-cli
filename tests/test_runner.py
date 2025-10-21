@@ -7,12 +7,16 @@ import pytest
 
 from dialectus.cli.runner import (
     DebateRunner,
-    EnsembleResultData,
     _safe_isoformat,  # pyright: ignore[reportPrivateUsage]
 )
 from dialectus.cli.config import AppConfig
-from dialectus.cli.db_types import DebateTranscriptData, JudgeDecisionWithScores
+from dialectus.cli.db_types import (
+    DebateTranscriptData,
+    EnsembleResultData,
+    JudgeDecisionWithScores,
+)
 from dialectus.engine.debate_engine import DebateContext, DebatePhase
+from dialectus.engine.debate_engine.types import MessageCompleteEventData
 from dialectus.engine.judges.base import (
     JudgeDecision,
     CriterionScore,
@@ -329,10 +333,10 @@ class TestDebateRunner:
 
             debate_id = real_db.save_debate(sample_debate_data)
 
-            ensemble_result: EnsembleResultData = {
-                "type": "ensemble",
-                "decisions": [mock_judge_decision, mock_judge_decision],
-                "ensemble_summary": EnsembleResult(
+            ensemble_result = EnsembleResultData(
+                type="ensemble",
+                decisions=[mock_judge_decision, mock_judge_decision],
+                ensemble_summary=EnsembleResult(
                     final_winner_id="model_a",
                     final_margin=2.8,
                     ensemble_method="majority_vote_with_tiebreaker",
@@ -341,7 +345,7 @@ class TestDebateRunner:
                     summary_reasoning="Unanimous",
                     summary_feedback="Strong",
                 ),
-            }
+            )
 
             await runner.save_ensemble_result(debate_id, ensemble_result)
 
@@ -360,12 +364,17 @@ class TestDebateRunner:
 
             runner = DebateRunner(mock_config, mock_console)
 
-            message = {
-                "speaker_id": "model_a",
-                "position": "pro",
-                "phase": "opening",
-                "content": "Test message",
-            }
+            message = MessageCompleteEventData(
+                message_id="test_msg_1",
+                speaker_id="model_a",
+                position="pro",
+                phase="opening",
+                content="Test message",
+                round_number=1,
+                timestamp="2025-01-01T00:00:00",
+                word_count=2,
+                metadata={},
+            )
 
             runner.display_message(message)
 

@@ -5,13 +5,18 @@ from __future__ import annotations
 import json
 import logging
 import re
-from typing import Any, Callable, cast
+from typing import Callable
 
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
 from dialectus.cli.config import AppConfig
+from dialectus.cli.db_types import (
+    CriterionScoreRow,
+    DisplayJudgeDecision,
+    JudgeDecisionWithScores,
+)
 from dialectus.engine.models.providers import ProviderRateLimitError
 
 from textwrap import dedent
@@ -52,32 +57,27 @@ def display_debate_info(console: Console, config: AppConfig) -> None:
 def display_judge_decision(
     console: Console,
     config: AppConfig,
-    decision: dict[str, Any],
+    decision: DisplayJudgeDecision,
 ) -> None:
-    """Render a judge decision, handling both single and ensemble cases."""
-    if not decision:
-        console.print("[red]No judge decision data received[/red]")
-        return
+    """Render a judge decision, handling both single and ensemble cases.
 
-    side_label_mapping = _build_side_label_mapping(decision)
+    Args:
+        console: Rich console for output
+        config: App configuration with model details
+        decision: Structured judge decision (Pydantic model)
+    """
+    # side_label_mapping = _build_side_label_mapping(decision)
 
     def get_display_name(participant_identifier: str) -> str:
-        """Resolve display name for decisions that use either IDs or side labels."""
-        if participant_identifier in side_label_mapping:
-            actual_participant_id = side_label_mapping[participant_identifier]
-            if actual_participant_id in config.models:
-                model_name = config.models[actual_participant_id].name
-                return f"{model_name} ({participant_identifier})"
-            return f"{actual_participant_id} ({participant_identifier})"
-
+        """Resolve display name for participant ID."""
+        # TODO: Re-implement side label mapping if needed for display labels
         if participant_identifier in config.models:
             return config.models[participant_identifier].name
-
         return participant_identifier
 
-    winner_id = decision.get("winner_id", "unknown")
+    winner_id = decision.winner_id
     winner_display_name = get_display_name(winner_id)
-    winner_margin = decision.get("winner_margin", 0.0)
+    winner_margin = decision.winner_margin
 
     console.print(f"\n[bold green]🏆 WINNER: {winner_display_name}[/bold green]")
 
@@ -91,19 +91,16 @@ def display_judge_decision(
     judge_info = _format_judge_decision_info(decision)
     console.print(f"[dim]{judge_info}[/dim]")
 
-    overall_feedback = decision.get("overall_feedback")
-    if overall_feedback:
+    if decision.overall_feedback:
         console.print("\n[bold blue]Judge's Summary:[/bold blue]")
-        console.print(f"[italic]{overall_feedback}[/italic]")
+        console.print(f"[italic]{decision.overall_feedback}[/italic]")
 
-    _display_detailed_scoring(
-        console, decision.get("criterion_scores", []), get_display_name
-    )
-    _display_reasoning(console, decision.get("reasoning"))
+    _display_detailed_scoring(console, decision.criterion_scores, get_display_name)
+    _display_reasoning(console, decision.reasoning)
 
-    metadata = decision.get("metadata", {})
-    individual_decisions = metadata.get("individual_decisions", [])
-    ensemble_size = metadata.get("ensemble_size", 0)
+    metadata = decision.metadata
+    individual_decisions = metadata.individual_decisions
+    ensemble_size = metadata.ensemble_size
 
     if ensemble_size > 1 and individual_decisions:
         console.print("\n[bold blue]Individual Judge Decisions:[/bold blue]")
@@ -112,8 +109,8 @@ def display_judge_decision(
                 console, individual_decision, index, get_display_name
             )
 
-    if metadata.get("judge_model"):
-        console.print(f"\n[dim]Judge Model: {metadata['judge_model']}[/dim]")
+    if metadata.judge_model:
+        console.print(f"\n[dim]Judge Model: {metadata.judge_model}[/dim]")
 
 
 def display_error(console: Console, error: Exception) -> None:
@@ -174,17 +171,15 @@ def display_error(console: Console, error: Exception) -> None:
 
 def display_individual_judge_decision(
     console: Console,
-    decision: dict[str, Any],
+    decision: JudgeDecisionWithScores,
     judge_number: int,
     get_display_name_func: Callable[[str], str],
 ) -> None:
-    """Render an individual judge decision for ensemble judging."""
-    judge_model = decision.get("metadata", {}).get(
-        "judge_model", f"Judge {judge_number}"
-    )
-    winner_id = decision.get("winner_id", "unknown")
+    """Render an individual judge decision for ensemble judging using Pydantic model."""
+    judge_model = decision.metadata.get("judge_model", f"Judge {judge_number}")
+    winner_id = decision.winner_id
     winner_display_name = get_display_name_func(winner_id)
-    winner_margin = decision.get("winner_margin", 0.0)
+    winner_margin = decision.winner_margin
 
     console.print(f"\n[bold cyan]🤖 Judge {judge_number} ({judge_model})[/bold cyan]")
     console.print(f"[green]Winner: {winner_display_name}[/green]")
@@ -195,17 +190,16 @@ def display_individual_judge_decision(
             f"[dim]Margin: {winner_margin:.1f} points ({victory_strength})[/dim]"
         )
 
-    overall_feedback = decision.get("overall_feedback")
-    if overall_feedback:
-        console.print(f"[italic]{overall_feedback}[/italic]")
+    if decision.overall_feedback:
+        console.print(f"[italic]{decision.overall_feedback}[/italic]")
 
     _display_individual_scores(
         console,
-        decision.get("criterion_scores", []),
+        decision.criterion_scores,
         get_display_name_func,
         f"Judge {judge_number} Detailed Scoring",
     )
-    reasoning = decision.get("reasoning")
+    reasoning = decision.reasoning
     if reasoning and not _is_structured_data(reasoning):
         console.print(
             "[dim]Reasoning:"
@@ -251,14 +245,15 @@ def _format_judge_info(config: AppConfig) -> str:
     return judge_info
 
 
-def _format_judge_decision_info(judge_decision: dict[str, Any]) -> str:
-    metadata = judge_decision.get("metadata", {})
-    ensemble_size = metadata.get("ensemble_size", 0)
+def _format_judge_decision_info(judge_decision: DisplayJudgeDecision) -> str:
+    """Format judge decision info string from Pydantic model."""
+    metadata = judge_decision.metadata
+    ensemble_size = metadata.ensemble_size
 
     if ensemble_size and ensemble_size > 1:
         return f"Ensemble Decision ({ensemble_size} judges)"
 
-    judge_model = metadata.get("judge_model")
+    judge_model = metadata.judge_model
     if judge_model:
         return f"Judge: {judge_model}"
     return "AI Judge"
@@ -276,17 +271,17 @@ def _get_victory_strength(margin: float) -> str:
     return "Decisive Victory"
 
 
-def _check_incomplete_scoring(criterion_scores: list[dict[str, Any]]) -> bool:
+def _check_incomplete_scoring(criterion_scores: list[CriterionScoreRow]) -> bool:
+    """Check if scoring is incomplete (missing categories for any participant)."""
     if not criterion_scores:
         return True
 
     participant_counts: dict[str, int] = {}
     for score in criterion_scores:
-        participant_id = score.get("participant_id")
-        if participant_id:
-            participant_counts[participant_id] = (
-                participant_counts.get(participant_id, 0) + 1
-            )
+        participant_id = score.participant_id
+        participant_counts[participant_id] = (
+            participant_counts.get(participant_id, 0) + 1
+        )
 
     expected_categories = 3
     return any(count < expected_categories for count in participant_counts.values())
@@ -314,9 +309,10 @@ def _is_structured_data(text: str) -> bool:
 
 def _display_detailed_scoring(
     console: Console,
-    criterion_scores: list[dict[str, Any]],
+    criterion_scores: list[CriterionScoreRow],
     get_display_name: Callable[[str], str],
 ) -> None:
+    """Display detailed scoring table using Pydantic models."""
     if not criterion_scores:
         return
 
@@ -334,27 +330,16 @@ def _display_detailed_scoring(
     scoring_table.add_column("Feedback", style="dim", width=FEEDBACK_COLUMN_WIDTH)
 
     for score in criterion_scores:
-        participant_id = score.get("participant_id", "unknown")
+        participant_id = score.participant_id
         participant_display_name = get_display_name(participant_id)
-
-        criterion_raw: Any = score.get("criterion", "unknown")
-        criterion: str
-        if isinstance(criterion_raw, dict):
-            criterion_dict = cast(dict[str, Any], criterion_raw)
-            criterion_value: Any = criterion_dict.get("value", "unknown")
-            criterion = str(criterion_value)
-        elif isinstance(criterion_raw, str):
-            criterion = criterion_raw
-        else:
-            criterion = str(criterion_raw)
-
-        score_value = score.get("score", 0.0)
-        feedback = score.get("feedback", "")
+        criterion = score.criterion
+        score_value = score.score
+        feedback = score.feedback or ""
 
         scoring_table.add_row(
             participant_display_name,
             criterion.title(),
-            f"{score_value:.1f}/10" if score_value is not None else "N/A",
+            f"{score_value:.1f}/10",
             feedback[:FEEDBACK_TRUNCATE_LENGTH] + "..."
             if len(feedback) > FEEDBACK_COLUMN_WIDTH
             else feedback,
@@ -391,10 +376,11 @@ def _display_reasoning(console: Console, reasoning: str | None) -> None:
 
 def _display_individual_scores(
     console: Console,
-    criterion_scores: list[dict[str, Any]],
+    criterion_scores: list[CriterionScoreRow],
     get_display_name_func: Callable[[str], str],
     title: str,
 ) -> None:
+    """Display individual scores table using Pydantic models."""
     if not criterion_scores:
         return
 
@@ -405,39 +391,20 @@ def _display_individual_scores(
     individual_table.add_column("Feedback", style="dim", width=35)
 
     for score in criterion_scores:
-        participant_id = score.get("participant_id", "unknown")
+        participant_id = score.participant_id
         participant_display_name = get_display_name_func(participant_id)
-
-        criterion = score.get("criterion", "unknown")
-        criterion_display = (
-            criterion.title() if isinstance(criterion, str) else str(criterion)
-        )
-
-        score_value = score.get("score", 0.0)
-        feedback = score.get("feedback", "")
+        criterion = score.criterion
+        score_value = score.score
+        feedback = score.feedback or ""
 
         individual_table.add_row(
             participant_display_name,
-            criterion_display,
-            f"{score_value:.1f}/10" if score_value is not None else "N/A",
+            criterion.title(),
+            f"{score_value:.1f}/10",
             feedback[:32] + "..." if len(feedback) > 35 else feedback,
         )
 
     console.print(individual_table)
-
-
-def _build_side_label_mapping(decision: dict[str, Any]) -> dict[str, str]:
-    side_label_mapping: dict[str, str] = {}
-    display_labels = decision.get("metadata", {}).get("display_labels", {})
-    if not display_labels:
-        return side_label_mapping
-
-    for participant_id, display_label in display_labels.items():
-        parts = display_label.split(" - ")
-        if len(parts) == 2:
-            side_label = parts[1]
-            side_label_mapping[side_label] = participant_id
-    return side_label_mapping
 
 
 __all__ = [
@@ -450,5 +417,4 @@ __all__ = [
     "_get_victory_strength",
     "_is_structured_data",
     "_check_incomplete_scoring",
-    "_build_side_label_mapping",
 ]

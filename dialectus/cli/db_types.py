@@ -245,3 +245,58 @@ class TranscriptData(BaseModel):
 
     metadata: DebateRow
     messages: list[MessageRow]
+
+
+# ============================================
+# ENGINE RESULT TYPES (for type-safe handling of engine returns)
+# ============================================
+
+
+class EnsembleResultData(BaseModel):
+    """Structure returned by engine's judge_debate_with_judges() for ensemble judging.
+
+    This is what the engine returns when multiple judges evaluate a debate.
+    Contains both individual judge decisions and the aggregated ensemble result.
+
+    NOTE: The engine imports are deferred to avoid circular dependencies.
+    """
+
+    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
+
+    type: str  # Always "ensemble" for multi-judge results
+    decisions: list[Any]  # list[JudgeDecision] from engine.judges.base
+    ensemble_summary: Any  # EnsembleResult from engine.judges.ensemble_utils
+
+
+# ============================================
+# DISPLAY TYPES (for presentation layer)
+# ============================================
+
+
+class DisplayEnsembleMetadata(BaseModel):
+    """Metadata for ensemble judge display in presentation layer."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    ensemble_size: int
+    consensus_level: float | None
+    ensemble_method: str
+    individual_decisions: list[JudgeDecisionWithScores]
+    judge_model: str | None = None  # For single judge case
+
+
+class DisplayJudgeDecision(BaseModel):
+    """Structured judge decision for display layer (passed to display_judge_decision).
+
+    This is a presentation model that combines database rows for rendering
+    judge results in the CLI. Works for both single judge and ensemble results.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    winner_id: str
+    winner_margin: float
+    overall_feedback: str | None
+    reasoning: str | None
+    criterion_scores: list[CriterionScoreRow]
+    metadata: DisplayEnsembleMetadata

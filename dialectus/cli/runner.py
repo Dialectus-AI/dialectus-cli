@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from textwrap import dedent
-from typing import Any, Protocol, TypedDict, cast
+from typing import Any, Protocol, cast
 from datetime import datetime
 
 from rich.console import Console
@@ -30,6 +30,9 @@ from dialectus.cli.db_types import (
     CriterionScoreRow,
     DebateMetadata,
     DebateTranscriptData,
+    DisplayEnsembleMetadata,
+    DisplayJudgeDecision,
+    EnsembleResultData,
     EnsembleSummaryData,
     EnsembleSummaryNotFoundError,
     EnsembleSummaryRow,
@@ -44,21 +47,8 @@ from dialectus.cli.presentation import display_judge_decision
 logger = logging.getLogger(__name__)
 
 
-class EnsembleResultData(TypedDict):
-    """Structure returned by judge_debate_with_judges() for ensemble judging.
-
-    This is what the engine returns when multiple judges evaluate a debate.
-    Contains both individual judge decisions and the aggregated ensemble result.
-    """
-
-    type: str  # Always "ensemble" for multi-judge results
-    decisions: list[JudgeDecision]  # Individual decisions from each judge
-    ensemble_summary: EnsembleResult  # Aggregated ensemble result
-
-
 __all__ = [
     "DebateRunner",
-    "EnsembleResultData",
     "_safe_isoformat",
 ]
 
@@ -116,7 +106,7 @@ class DebateRunner:
                 event: PhaseEventType, data: PhaseStartedEventData
             ):
                 if event == PhaseEventType.PHASE_STARTED:
-                    phase_name = data.get("phase", "unknown").upper()
+                    phase_name = data.phase.upper()
                     self.console.print(
                         f"\n[bold magenta]═══ {phase_name} ═══[/bold magenta]\n"
                     )
@@ -232,23 +222,21 @@ class DebateRunner:
             self.console.print(f"\n[red]Debate failed: {e}[/red]", style="bold")
             raise
 
-    def display_message(
-        self, message: MessageCompleteEventData | dict[str, Any]
-    ) -> None:
+    def display_message(self, message: MessageCompleteEventData) -> None:
         """Display a debate message with Rich formatting."""
         style_map = {"pro": "green", "con": "red", "neutral": "blue"}
 
-        position = message.get("position", "neutral")
+        position = message.position
         speaker_style = style_map.get(position, "white")
 
         # Get model name from config
-        speaker_id = message.get("speaker_id", "unknown")
+        speaker_id = message.speaker_id
         display_name = speaker_id
         if speaker_id in self.config.models:
             display_name = self.config.models[speaker_id].name
 
-        phase = message.get("phase", "unknown")
-        content = message.get("content", "")
+        phase = message.phase
+        content = message.content
 
         panel = Panel(
             content,
@@ -266,9 +254,15 @@ class DebateRunner:
     async def save_transcript(
         self,
         context: DebateContext,
-        judge_result: JudgeDecision | dict[str, Any] | None,
+        judge_result: JudgeDecision | EnsembleResultData | dict[str, Any] | None,
     ) -> int:
-        """Save debate transcript to database. Returns debate ID."""
+        """Save debate transcript to database. Returns debate ID.
+
+        Args:
+            context: Debate context with messages and metadata
+            judge_result: Either a single JudgeDecision, an EnsembleResultData model,
+                         or a dict from the engine (which we'll validate and convert)
+        """
         total_debate_time_ms = context.metadata.get("total_debate_time_ms", 0)
 
         # Build participant info
@@ -322,12 +316,15 @@ class DebateRunner:
 
         # Save judge results if provided
         if judge_result:
-            if (
+            if isinstance(judge_result, EnsembleResultData):
+                # Already a Pydantic model
+                await self.save_ensemble_result(db_id, judge_result)
+            elif (
                 isinstance(judge_result, dict)
                 and judge_result.get("type") == "ensemble"
             ):
-                # Type narrowing: we've verified it's a dict with "type" == "ensemble"
-                ensemble_data = cast(EnsembleResultData, judge_result)
+                # Convert dict from engine to Pydantic model for type safety
+                ensemble_data = EnsembleResultData.model_validate(judge_result)
                 await self.save_ensemble_result(db_id, ensemble_data)
             elif isinstance(judge_result, JudgeDecision):
                 await self.save_individual_decision(db_id, judge_result)
@@ -374,8 +371,8 @@ class DebateRunner:
         self, debate_id: int, ensemble_result: EnsembleResultData
     ) -> None:
         """Save ensemble result - individual decisions + ensemble summary."""
-        decisions: list[JudgeDecision] = ensemble_result["decisions"]
-        ensemble_summary: EnsembleResult = ensemble_result["ensemble_summary"]
+        decisions: list[JudgeDecision] = ensemble_result.decisions  # type: ignore[assignment]
+        ensemble_summary: EnsembleResult = ensemble_result.ensemble_summary  # type: ignore[assignment]
 
         logger.info(
             f"Saving ensemble result with {len(decisions)} decisions for debate"
@@ -412,10 +409,7 @@ class DebateRunner:
         """Load and display judge results from database."""
         try:
             # Check if this is an ensemble result
-            if (
-                isinstance(judge_result, dict)
-                and judge_result.get("type") == "ensemble"
-            ):
+            if isinstance(judge_result, EnsembleResultData):
                 # Load ensemble summary - raises if not found
                 ensemble_summary: EnsembleSummaryRow = self.db.load_ensemble_summary(
                     db_id
@@ -431,30 +425,45 @@ class DebateRunner:
                 for decision in individual_decisions:
                     all_criterion_scores.extend(decision.criterion_scores)
 
-                decision_dict: dict[str, Any] = {
-                    "winner_id": ensemble_summary.final_winner_id,
-                    "winner_margin": ensemble_summary.final_margin,
-                    "overall_feedback": ensemble_summary.summary_feedback,
-                    "reasoning": ensemble_summary.summary_reasoning,
-                    "criterion_scores": all_criterion_scores,
-                    "metadata": {
-                        "ensemble_size": ensemble_summary.num_judges,
-                        "consensus_level": ensemble_summary.consensus_level,
-                        "ensemble_method": ensemble_summary.ensemble_method,
-                        "individual_decisions": individual_decisions,
-                    },
-                }
+                # Create strongly-typed display model
+                display_decision = DisplayJudgeDecision(
+                    winner_id=ensemble_summary.final_winner_id,
+                    winner_margin=ensemble_summary.final_margin,
+                    overall_feedback=ensemble_summary.summary_feedback,
+                    reasoning=ensemble_summary.summary_reasoning,
+                    criterion_scores=all_criterion_scores,
+                    metadata=DisplayEnsembleMetadata(
+                        ensemble_size=ensemble_summary.num_judges,
+                        consensus_level=ensemble_summary.consensus_level,
+                        ensemble_method=ensemble_summary.ensemble_method,
+                        individual_decisions=individual_decisions,
+                    ),
+                )
 
-                display_judge_decision(self.console, self.config, decision_dict)
+                display_judge_decision(self.console, self.config, display_decision)
             else:
                 # Single judge case - raises if not found
                 judge_decision: JudgeDecisionWithScores = self.db.load_judge_decision(
                     db_id
                 )
-                # Pydantic models can be converted to dict for display functions
-                display_judge_decision(
-                    self.console, self.config, judge_decision.model_dump()
+
+                # Create strongly-typed display model for single judge
+                display_decision = DisplayJudgeDecision(
+                    winner_id=judge_decision.winner_id,
+                    winner_margin=judge_decision.winner_margin,
+                    overall_feedback=judge_decision.overall_feedback,
+                    reasoning=judge_decision.reasoning,
+                    criterion_scores=judge_decision.criterion_scores,
+                    metadata=DisplayEnsembleMetadata(
+                        ensemble_size=1,
+                        consensus_level=None,
+                        ensemble_method="single",
+                        individual_decisions=[],
+                        judge_model=judge_decision.judge_model,
+                    ),
                 )
+
+                display_judge_decision(self.console, self.config, display_decision)
 
         except (
             EnsembleSummaryNotFoundError,

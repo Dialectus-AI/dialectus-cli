@@ -1,6 +1,7 @@
 {
   "include": [
-    "dialectus"
+    "dialectus",
+    "tests"
   ],
   "exclude": [
     "venv",
@@ -13,18 +14,17 @@
     ".ruff_cache"
   ],
   "venvPath": ".",
-  "venv": "venv",
+  "venv": ".venv",
   "extraPaths": [
     ".",
-    "./venv/Lib/site-packages",
-    "./venv/lib/python3.12/site-packages",
-    "./venv/lib/python3.13/site-packages",
-    "./venv/lib/python3.14/site-packages"
+    "./.venv/Lib/site-packages",
+    "./.venv/lib/python3.12/site-packages"
   ],
   "pythonVersion": "3.12",
   "typeCheckingMode": "strict",
   "reportMissingTypeStubs": "none",
   "useLibraryCodeForTypes": true,
+  "reportUnusedVariable": "error",
   "executionEnvironments": [
     {
       "root": ".",

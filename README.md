@@ -2,7 +2,7 @@
 
 # Dialectus CLI
 
-Command-line interface for the Dialectus AI debate system. Run AI debates locally with Ollama or cloud models via OpenRouter.
+Command-line interface for the Dialectus AI debate system. Run AI debates locally with Ollama or cloud models via OpenRouter and Anthropic.
 
 > **Related Project:** This CLI uses the [dialectus-engine](https://github.com/dialectus-ai/dialectus-engine) library for all debate orchestration. Check out the engine repository for the core debate logic, API documentation, and library usage examples.
 
@@ -55,19 +55,24 @@ pip install -e ".[dev]"
 - **Python 3.12+**
 - **uv** (recommended): Fast Python package manager - [Install uv](https://docs.astral.sh/uv/getting-started/installation/)
 - **Ollama** (if using local models): Running at `http://localhost:11434`
-- **OpenRouter API key** (if using cloud models): Set via environment variable
+- **API keys** (if using cloud models): Set via environment variables
+  - **Anthropic**: For Claude models (3.5 Sonnet, Haiku, etc.)
+  - **OpenRouter**: For access to 100+ models including Claude, GPT-4, Llama, etc.
 
 ### Environment Variables
 
 ```bash
 # Linux/macOS
-export OPENROUTER_API_KEY="your-key-here"
+export ANTHROPIC_API_KEY="sk-ant-api03-..."
+export OPENROUTER_API_KEY="sk-or-v1-..."
 
 # Windows PowerShell
-$env:OPENROUTER_API_KEY="your-key-here"
+$env:ANTHROPIC_API_KEY="sk-ant-api03-..."
+$env:OPENROUTER_API_KEY="sk-or-v1-..."
 
 # Windows CMD
-set OPENROUTER_API_KEY=your-key-here
+set ANTHROPIC_API_KEY=sk-ant-api03-...
+set OPENROUTER_API_KEY=sk-or-v1-...
 ```
 
 ## Quick Start
@@ -88,12 +93,15 @@ dialectus debate
 ## Configuration
 
 Edit `debate_config.json` to configure:
-- **Models**: Debate participants (Ollama or OpenRouter)
+- **Models**: Debate participants (Ollama, OpenRouter, or Anthropic)
+  - **Ollama** (local): `"provider": "ollama"`, `"name": "llama3.2:3b"`
+  - **OpenRouter** (cloud): `"provider": "openrouter"`, `"name": "anthropic/claude-3.5-sonnet"`
+  - **Anthropic** (direct): `"provider": "anthropic"`, `"name": "claude-3-5-sonnet-20241022"`
 - **Judging**: AI judge models and evaluation criteria
   - Use a single judge: `"judge_models": ["openthinker:7b"]`
   - Use ensemble judging with multiple judges: `"judge_models": ["openthinker:7b", "llama3.2:3b", "qwen2.5:3b"]`
   - The engine aggregates multiple judges using majority voting with consensus analysis
-- **System**: Ollama/OpenRouter settings, topic generation, logging
+- **System**: Provider settings (Ollama/OpenRouter/Anthropic), topic generation, logging
 
 ## Commands
 
@@ -121,6 +129,113 @@ uv run dialectus transcripts --limit 50
 ## Database
 
 Transcripts are saved to SQLite database at `~/.dialectus/debates.db`
+
+## Provider Setup
+
+### Anthropic (Claude Models)
+
+**Direct access to Claude models with official Anthropic API:**
+
+1. **Get an API key**: Sign up at [console.anthropic.com](https://console.anthropic.com/)
+
+2. **Set your API key** (choose one method):
+
+   **Environment variable (recommended):**
+   ```bash
+   export ANTHROPIC_API_KEY="sk-ant-api03-..."
+   ```
+
+   **Or in `debate_config.json`:**
+   ```json
+   {
+     "system": {
+       "anthropic": {
+         "api_key": "sk-ant-api03-...",
+         "base_url": "https://api.anthropic.com/v1",
+         "max_retries": 3,
+         "timeout": 60
+       }
+     }
+   }
+   ```
+
+3. **Configure models** using official model names:
+   ```json
+   {
+     "models": {
+       "model_a": {
+         "name": "claude-3-5-sonnet-20241022",
+         "provider": "anthropic",
+         "personality": "analytical",
+         "max_tokens": 300,
+         "temperature": 0.7
+       }
+     }
+   }
+   ```
+
+**Available Claude models:**
+- `claude-3-5-sonnet-20241022` - Latest, most intelligent (best for debates)
+- `claude-3-5-haiku-20241022` - Fastest and most economical
+- `claude-3-opus-20240229` - Most capable Claude 3 model
+- `claude-3-sonnet-20240229` - Balanced performance
+- `claude-3-haiku-20240307` - Budget-friendly option
+
+### OpenRouter
+
+**Access to 100+ models including Claude, GPT-4, Llama, and more:**
+
+1. **Get an API key**: Sign up at [openrouter.ai](https://openrouter.ai/)
+
+2. **Set your API key**:
+   ```bash
+   export OPENROUTER_API_KEY="sk-or-v1-..."
+   ```
+
+3. **Configure models** using OpenRouter's naming:
+   ```json
+   {
+     "models": {
+       "model_a": {
+         "name": "anthropic/claude-3.5-sonnet",
+         "provider": "openrouter",
+         "personality": "analytical",
+         "max_tokens": 300,
+         "temperature": 0.7
+       }
+     }
+   }
+   ```
+
+### Ollama (Local Models)
+
+**Run models locally without any API keys:**
+
+1. **Install Ollama**: Download from [ollama.com](https://ollama.com/)
+
+2. **Pull models**:
+   ```bash
+   ollama pull llama3.2:3b
+   ollama pull qwen2.5:7b
+   ```
+
+3. **Configure**:
+   ```json
+   {
+     "models": {
+       "model_a": {
+         "name": "llama3.2:3b",
+         "provider": "ollama",
+         "personality": "analytical",
+         "max_tokens": 300,
+         "temperature": 0.7
+       }
+     },
+     "system": {
+       "ollama_base_url": "http://localhost:11434"
+     }
+   }
+   ```
 
 ## Architecture
 

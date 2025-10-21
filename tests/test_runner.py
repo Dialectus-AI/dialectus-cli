@@ -385,8 +385,6 @@ class TestDebateRunner:
         mock_config: AppConfig,
         mock_console: Mock,
         mock_judge_decision: JudgeDecision,
-        temp_db: str,
-        sample_debate_data: DebateTranscriptData,
     ):
         with patch("dialectus.cli.runner.DatabaseManager") as mock_db_class:
             mock_db = Mock()

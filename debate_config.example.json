@@ -33,6 +33,7 @@
     ]
   },
   "_comment_ensemble_judging": "For ensemble judging with multiple judges, add more models to judge_models array, e.g.: ['openthinker:7b', 'llama3.2:3b', 'qwen2.5:3b']. The engine will aggregate their decisions using majority voting with consensus analysis.",
+  "_comment_anthropic_example": "To use Anthropic models directly: set provider='anthropic' and use model names like 'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022', etc. Set ANTHROPIC_API_KEY env var or add api_key to system.anthropic config.",
   "system": {
     "ollama_base_url": "http://localhost:11434",
     "ollama": {
@@ -48,6 +49,12 @@
       "base_url": "https://openrouter.ai/api/v1",
       "site_url": "https://dialectus.ai",
       "app_name": "Dialectus AI",
+      "max_retries": 3,
+      "timeout": 60
+    },
+    "anthropic": {
+      "api_key": null,
+      "base_url": "https://api.anthropic.com/v1",
       "max_retries": 3,
       "timeout": 60
     },

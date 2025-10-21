@@ -32,6 +32,7 @@
       "persuasiveness"
     ]
   },
+  "_comment_ensemble_judging": "For ensemble judging with multiple judges, add more models to judge_models array, e.g.: ['openthinker:7b', 'llama3.2:3b', 'qwen2.5:3b']. The engine will aggregate their decisions using majority voting with consensus analysis.",
   "system": {
     "ollama_base_url": "http://localhost:11434",
     "ollama": {

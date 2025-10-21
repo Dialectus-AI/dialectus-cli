@@ -18,6 +18,7 @@ from dialectus.engine.judges.base import (
     CriterionScore,
     JudgmentCriterion,
 )
+from dialectus.engine.judges.ensemble_utils import EnsembleResult
 from dialectus.engine.models.providers import ProviderRateLimitError
 
 
@@ -331,15 +332,15 @@ class TestDebateRunner:
             ensemble_result: EnsembleResultData = {
                 "type": "ensemble",
                 "decisions": [mock_judge_decision, mock_judge_decision],
-                "ensemble_summary": {
-                    "final_winner_id": "model_a",
-                    "final_margin": 2.8,
-                    "ensemble_method": "majority_vote_with_tiebreaker",
-                    "num_judges": 2,
-                    "consensus_level": 0.95,
-                    "summary_reasoning": "Unanimous",
-                    "summary_feedback": "Strong",
-                },
+                "ensemble_summary": EnsembleResult(
+                    final_winner_id="model_a",
+                    final_margin=2.8,
+                    ensemble_method="majority_vote_with_tiebreaker",
+                    num_judges=2,
+                    consensus_level=0.95,
+                    summary_reasoning="Unanimous",
+                    summary_feedback="Strong",
+                ),
             }
 
             await runner.save_ensemble_result(debate_id, ensemble_result)

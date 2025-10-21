@@ -17,12 +17,25 @@ if __package__ in {None, ""}:
 # Ensure UTF-8 encoding for cross-platform compatibility (Windows console, Git Bash, etc.)
 os.environ["PYTHONIOENCODING"] = "utf-8"
 
+# Force UTF-8 encoding on Windows for Rich Console to handle Unicode characters
+# This fixes Git Bash/Windows console cp1252 encoding issues with box-drawing chars
+if sys.platform == "win32":
+    import io
+
+    # Wrap stdout with UTF-8 encoding, ignoring errors for incompatible chars
+    sys.stdout = io.TextIOWrapper(
+        sys.stdout.buffer, encoding="utf-8", errors="replace", line_buffering=True
+    )
+    sys.stderr = io.TextIOWrapper(
+        sys.stderr.buffer, encoding="utf-8", errors="replace", line_buffering=True
+    )
+
 import click
 from rich.console import Console
 from rich.prompt import Confirm
 from rich.table import Table
 
-from dialectus.cli.config import AppConfig, get_default_config
+from dialectus.cli.config import AppConfig, ConfigurationError, get_default_config
 from dialectus.cli.runner import DebateRunner
 from dialectus.cli.database import DatabaseManager
 from dialectus.cli.presentation import display_debate_info, display_error
@@ -90,12 +103,18 @@ def setup_logging(level: str = "WARNING") -> None:
 def cli(ctx: click.Context, config: str | None, log_level: str | None) -> None:
     """Dialectus - AI-powered debate orchestration using dialectus-engine."""
     # Load configuration first
-    if config:
-        app_config = AppConfig.load_from_file(Path(config))
-        console.print(f"[green]OK[/green] Loaded config from {config}")
-    else:
-        app_config = get_default_config()
-        console.print("[green]OK[/green] Loaded default config from debate_config.json")
+    try:
+        if config:
+            app_config = AppConfig.load_from_file(Path(config))
+            console.print(f"[green]OK[/green] Loaded config from {config}")
+        else:
+            app_config = get_default_config()
+            console.print(
+                "[green]OK[/green] Loaded default config from debate_config.json"
+            )
+    except ConfigurationError:
+        # Error message already printed by config module
+        raise SystemExit(1)
 
     # Use CLI log level if provided, otherwise use config file value
     effective_log_level = (
@@ -162,6 +181,9 @@ def list_models(ctx: click.Context) -> None:
         from dialectus.engine.models.providers.open_router_provider import (
             OpenRouterProvider,
         )
+        from dialectus.engine.models.providers.anthropic_provider import (
+            AnthropicProvider,
+        )
         from dialectus.engine.models.base_types import BaseEnhancedModelInfo
 
         # Detect which providers are actually in use from the config
@@ -189,6 +211,7 @@ def list_models(ctx: click.Context) -> None:
         provider_classes = {
             "ollama": OllamaProvider,
             "openrouter": OpenRouterProvider,
+            "anthropic": AnthropicProvider,
         }
 
         # Query each provider that's in use

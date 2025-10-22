@@ -166,6 +166,12 @@ def temp_config_file() -> Generator[Path, None, None]:
       "api_key": null,
       "base_url": "https://openrouter.ai/api/v1"
     },
+    "openai": {
+      "api_key": null
+    },
+    "anthropic": {
+      "api_key": null
+    },
     "log_level": "INFO"
   }
 }""")

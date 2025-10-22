@@ -213,7 +213,7 @@ wheels = [
 
 [[package]]
 name = "dialectus-cli"
-version = "0.2.1"
+version = "0.3.0"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
@@ -236,7 +236,7 @@ dev = [
 requires-dist = [
     { name = "build", marker = "extra == 'dev'" },
     { name = "click", specifier = ">=8.2.1" },
-    { name = "dialectus-engine", specifier = ">=0.3.1" },
+    { name = "dialectus-engine", specifier = ">=0.4.0" },
     { name = "pydantic", specifier = ">=2.11.0" },
     { name = "pyright", marker = "extra == 'dev'", specifier = ">=1.1.406" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
@@ -249,16 +249,16 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "dialectus-engine"
-version = "0.3.1"
+version = "0.4.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
     { name = "openai" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/56/ad/3ffdeaa369c3e37dd2f353161f71e0d7c8d1d9f5528b4e34d43a9e6ee577/dialectus_engine-0.3.1.tar.gz", hash = "sha256:3e51b20bde2b3ed77ea8225349cd5351c33461d4a3ebbf746ab9e56aef9a2b7a", size = 88695, upload-time = "2025-10-21T03:21:04.089Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/91/66/daacfeef9741ca862057d6b4749752e6e9cc158382569d54b8412c29d582/dialectus_engine-0.4.0.tar.gz", hash = "sha256:bc04bb9a5bc65b723ef3f245b51ccc5865ca75069d0285b27ee184024549d3aa", size = 100785, upload-time = "2025-10-22T01:06:42.215Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/73/88/f90db46315e2c1a840227070512d94f14391b30da4f71f95441a8f7af977/dialectus_engine-0.3.1-py3-none-any.whl", hash = "sha256:99fc8f6bad30b294862c407c158c41b90cdfdb80af3a2c4cf802068bd46eb901", size = 98576, upload-time = "2025-10-21T03:21:02.697Z" },
+    { url = "https://files.pythonhosted.org/packages/0c/01/bfac171899331f51d301681988c96523405aa39c8f9ecad0991695d1d15e/dialectus_engine-0.4.0-py3-none-any.whl", hash = "sha256:6d246a1125893382c6b23ccee69479ba65e2b9275662939b58b801128e15cc95", size = 116275, upload-time = "2025-10-22T01:06:40.908Z" },
 ]
 
 [[package]]

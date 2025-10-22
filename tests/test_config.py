@@ -70,15 +70,25 @@ class TestConfigLoading:
                 ):
                     get_default_config()
 
-    def test_openrouter_with_valid_key(self, temp_config_file: Path):
+    def test_openrouter_with_valid_key(
+        self, temp_config_file: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        # Remove env vars so config file values are used
+        if "OPENROUTER_API_KEY" in os.environ:
+            monkeypatch.delenv("OPENROUTER_API_KEY")
+        if "OPENAI_API_KEY" in os.environ:
+            monkeypatch.delenv("OPENAI_API_KEY")
+
+        # Load config BEFORE patching so we get a real config object
+        config = AppConfig.load_from_file(temp_config_file)
+        config.models["model_a"].provider = "openrouter"
+        config.system.openrouter.api_key = "test-key-in-config"
+
         with patch("dialectus.cli.config.Path") as mock_path_class:
             mock_path_instance = mock_path_class.return_value
             mock_path_instance.exists.return_value = True
 
             with patch("dialectus.cli.config.AppConfig.load_from_file") as mock_load:
-                config = AppConfig.load_from_file(temp_config_file)
-                config.models["model_a"].provider = "openrouter"
-                config.system.openrouter.api_key = "test-key-in-config"
                 mock_load.return_value = config
 
                 config = get_default_config()
@@ -106,7 +116,13 @@ class TestConfigLoading:
                 with pytest.raises(ConfigurationError, match="Missing OpenAI API key"):
                     get_default_config()
 
-    def test_openai_with_valid_key(self, temp_config_file: Path):
+    def test_openai_with_valid_key(
+        self, temp_config_file: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        # Remove env var so config file value is used
+        if "OPENAI_API_KEY" in os.environ:
+            monkeypatch.delenv("OPENAI_API_KEY")
+
         with patch("dialectus.cli.config.Path") as mock_path_class:
             mock_path_instance = mock_path_class.return_value
             mock_path_instance.exists.return_value = True

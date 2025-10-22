@@ -19,7 +19,8 @@ os.environ["PYTHONIOENCODING"] = "utf-8"
 
 # Force UTF-8 encoding on Windows for Rich Console to handle Unicode characters
 # This fixes Git Bash/Windows console cp1252 encoding issues with box-drawing chars
-if sys.platform == "win32":
+# Skip this when running under pytest to avoid conflicts with pytest's capture mechanism
+if sys.platform == "win32" and "pytest" not in sys.modules:
     import io
 
     # Wrap stdout with UTF-8 encoding, ignoring errors for incompatible chars

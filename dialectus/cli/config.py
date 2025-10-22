@@ -87,9 +87,7 @@ def _validate_provider_api_keys(config: AppConfig) -> None:
         raise ConfigurationError("Missing Anthropic API key")
 
     # Check OpenAI
-    uses_openai = any(
-        model.provider == "openai" for model in config.models.values()
-    )
+    uses_openai = any(model.provider == "openai" for model in config.models.values())
     if uses_openai and not config.system.openai.api_key:
         _print_api_key_error("OpenAI", "OPENAI_API_KEY")
         raise ConfigurationError("Missing OpenAI API key")

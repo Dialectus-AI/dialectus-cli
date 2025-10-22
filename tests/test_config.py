@@ -103,9 +103,7 @@ class TestConfigLoading:
             with patch(
                 "dialectus.cli.config.AppConfig.load_from_file", return_value=config
             ):
-                with pytest.raises(
-                    ConfigurationError, match="Missing OpenAI API key"
-                ):
+                with pytest.raises(ConfigurationError, match="Missing OpenAI API key"):
                     get_default_config()
 
     def test_openai_with_valid_key(self, temp_config_file: Path):

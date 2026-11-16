@@ -1,4 +1,4 @@
-<img src="https://raw.githubusercontent.com/dialectus-ai/dialectus-engine/main/assets/logo.png" alt="Dialectus CLI" width="350">
+<img width="500" height="117" alt="dialectus-logo-horz" src="https://github.com/user-attachments/assets/438b8963-0652-4886-acd1-5c197040c606" />
 
 # Dialectus CLI
 
@@ -56,9 +56,9 @@ pip install -e ".[dev]"
 - **uv** (recommended): Fast Python package manager - [Install uv](https://docs.astral.sh/uv/getting-started/installation/)
 - **Ollama** (if using local models): Running at `http://localhost:11434`
 - **API keys** (if using cloud models): Set via environment variables
-  - **OpenAI**: For GPT-4.1, GPT-4o, GPT-4o Mini, etc.
-  - **Anthropic**: For Claude models (3.5 Sonnet, Haiku, etc.)
-  - **OpenRouter**: For access to 100+ models including Claude, GPT-4, Llama, etc.
+  - **OpenAI**: For GPT models
+  - **Anthropic**: For Claude models
+  - **OpenRouter**: One key for hundreds of models from Anthropic, OpenAI, Google, Meta, and more
 
 ### Environment Variables
 
@@ -99,9 +99,9 @@ dialectus debate
 Edit `debate_config.json` to configure:
 - **Models**: Debate participants (Ollama, OpenRouter, Anthropic, or OpenAI)
   - **Ollama** (local): `"provider": "ollama"`, `"name": "llama3.2:3b"`
-  - **OpenRouter** (cloud): `"provider": "openrouter"`, `"name": "anthropic/claude-3.5-sonnet"`
-  - **Anthropic** (direct): `"provider": "anthropic"`, `"name": "claude-3-5-sonnet-20241022"`
-  - **OpenAI** (direct): `"provider": "openai"`, `"name": "gpt-4o-mini"`
+  - **OpenRouter** (cloud): `"provider": "openrouter"`, `"name": "anthropic/claude-haiku-5.5"`
+  - **Anthropic** (direct): `"provider": "anthropic"`, `"name": "claude-haiku-5-5"`
+  - **OpenAI** (direct): `"provider": "openai"`, `"name": "gpt-4.1-mini"`
 - **Judging**: AI judge models and evaluation criteria
   - Use a single judge: `"judge_models": ["openthinker:7b"]`
   - Use ensemble judging with multiple judges: `"judge_models": ["openthinker:7b", "llama3.2:3b", "qwen2.5:3b"]`
@@ -110,7 +110,7 @@ Edit `debate_config.json` to configure:
 
 ## Commands
 
-All commands work identically across platforms:
+All commands work identically across platforms. After a PyPI install, run `dialectus ...` directly; from a source checkout, prefix with `uv run` as shown below.
 
 ### Start a Debate
 ```bash
@@ -139,7 +139,7 @@ Transcripts are saved to SQLite database at `~/.dialectus/debates.db`
 
 ### OpenAI (GPT Models)
 
-**Use OpenAI's native API for GPT-4.1, GPT-4o, GPT-4o Mini, and more:**
+**Use OpenAI's native API for GPT models:**
 
 1. **Get an API key**: Create one at [platform.openai.com](https://platform.openai.com/)
 
@@ -169,7 +169,7 @@ Transcripts are saved to SQLite database at `~/.dialectus/debates.db`
    {
      "models": {
        "model_a": {
-         "name": "gpt-4o-mini",
+         "name": "gpt-4.1-mini",
          "provider": "openai",
          "personality": "analytical",
          "max_tokens": 300,
@@ -179,11 +179,7 @@ Transcripts are saved to SQLite database at `~/.dialectus/debates.db`
    }
    ```
 
-**Popular OpenAI models:**
-- `gpt-4.1` – frontier reasoning with multimodal support
-- `gpt-4.1-mini` – cost-efficient GPT-4.1 variant
-- `gpt-4o` – balanced quality and speed
-- `gpt-4o-mini` – fast, low-cost assistant model
+Any model ID your OpenAI account can access will work. See [OpenAI's model documentation](https://platform.openai.com/docs/models) for the current lineup. Examples: `gpt-4.1`, `gpt-4.1-mini`, `gpt-4o`.
 
 ### Anthropic (Claude Models)
 
@@ -217,7 +213,7 @@ Transcripts are saved to SQLite database at `~/.dialectus/debates.db`
    {
      "models": {
        "model_a": {
-         "name": "claude-3-5-sonnet-20241022",
+         "name": "claude-haiku-5-5",
          "provider": "anthropic",
          "personality": "analytical",
          "max_tokens": 300,
@@ -227,16 +223,13 @@ Transcripts are saved to SQLite database at `~/.dialectus/debates.db`
    }
    ```
 
-**Available Claude models:**
-- `claude-3-5-sonnet-20241022` - Latest, most intelligent (best for debates)
-- `claude-3-5-haiku-20241022` - Fastest and most economical
-- `claude-3-opus-20240229` - Most capable Claude 3 model
-- `claude-3-sonnet-20240229` - Balanced performance
-- `claude-3-haiku-20240307` - Budget-friendly option
+**Choosing a model:** use any model ID your Anthropic account can access. See [Anthropic's model documentation](https://docs.anthropic.com/en/docs/models-overview) for the current lineup. The older Claude 3 and 3.5 models have been retired, so old configs that name them will need updating.
+
+Cost tracking for direct Anthropic and OpenAI models relies on a built-in pricing catalog that may not include the newest models. OpenRouter reports real per-request costs.
 
 ### OpenRouter
 
-**Access to 100+ models including Claude, GPT-4, Llama, and more:**
+**One API key for hundreds of models from Anthropic, OpenAI, Google, Meta, and more:**
 
 1. **Get an API key**: Sign up at [openrouter.ai](https://openrouter.ai/)
 
@@ -250,7 +243,7 @@ Transcripts are saved to SQLite database at `~/.dialectus/debates.db`
    {
      "models": {
        "model_a": {
-         "name": "anthropic/claude-3.5-sonnet",
+         "name": "anthropic/claude-haiku-5.5",
          "provider": "openrouter",
          "personality": "analytical",
          "max_tokens": 300,
@@ -259,6 +252,8 @@ Transcripts are saved to SQLite database at `~/.dialectus/debates.db`
      }
    }
    ```
+
+   Browse model IDs at [openrouter.ai/models](https://openrouter.ai/models), or run `dialectus list-models`. Variants with a `:batch` suffix only accept OpenRouter's batch API and fail on chat requests, so don't configure them.
 
 ### Ollama (Local Models)
 
@@ -398,7 +393,6 @@ pip install -e ".[dev]"
 
 - **10-100x faster** than pip for installs and resolution
 - **Reproducible builds** via `uv.lock` (cross-platform, includes hashes)
-- **Python 3.14 ready** - Takes advantage of free-threading for even better performance
 - **Single source of truth** - Dependencies in `pyproject.toml`, lock file auto-generated
 - **Compatible** - `pip` still works perfectly with `pyproject.toml`
 
